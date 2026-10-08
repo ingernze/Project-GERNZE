@@ -1,0 +1,80 @@
+{
+  "version": "level_random_preview_v01_20261003",
+  "random_walk": {
+    "enabled": true,
+    "idle_wait_ms": [
+      20000,
+      45000
+    ],
+    "cycles": [
+      1,
+      3
+    ],
+    "speed_pixels_per_second": 24,
+    "edge_margin_pixels": 8
+  },
+  "random_sleep": {
+    "enabled": true,
+    "wait_ms": [
+      480000,
+      900000
+    ],
+    "duration_ms": [
+      120000,
+      240000
+    ]
+  },
+  "selector": {
+    "enabled": true,
+    "probability_status": "temporary_preview_pending_user_decision",
+    "idle_wait_ms": [
+      20000,
+      45000
+    ],
+    "contexts": {
+      "idle": {
+        "enabled": true,
+        "level_weights": {
+          "1": 1,
+          "2": 1,
+          "3": 1
+        }
+      },
+      "busy": {
+        "enabled": false,
+        "level_weights": null
+      }
+    },
+    "levels": [
+      {
+        "id": 1,
+        "name": "四向行走",
+        "actions": [
+          "walk_up",
+          "walk_down",
+          "walk_left",
+          "walk_right"
+        ]
+      },
+      {
+        "id": 2,
+        "name": "看书",
+        "actions": [
+          "reading"
+        ]
+      },
+      {
+        "id": 3,
+        "name": "睡觉",
+        "actions": [
+          "sleep"
+        ]
+      }
+    ]
+  },
+  "random_reading": {
+    "enabled": true,
+    "wait_policy": "inherit_reading_manifest",
+    "duration_policy": "inherit_reading_manifest"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "gpt_options": [],
+  "sovits_options": [],
+  "references": [],
+  "defaults": {
+    "gpt_id": "",
+    "sovits_id": "",
+    "reference_id": ""
+  }
+}

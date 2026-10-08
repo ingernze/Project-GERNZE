@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "modules": {
+    "cet6": {
+      "version": "uninstalled",
+      "files": {},
+      "bytes": 0,
+      "available": false
+    },
+    "fixed_voice": {
+      "version": "uninstalled",
+      "files": {},
+      "bytes": 0,
+      "available": false
+    },
+    "voice_engine": {
+      "version": "uninstalled",
+      "files": {},
+      "bytes": 0,
+      "available": false
+    }
+  }
+}

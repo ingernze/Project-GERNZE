@@ -1,0 +1,16 @@
+.hebao-arrival-layer { position: fixed; inset: 0; z-index: 200; overflow: hidden; background: #000; }
+.hebao-arrival-layer.is-playing { background: transparent; }
+.hebao-arrival-video { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; pointer-events: none; }
+.hebao-arrival-resume { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); border: 1px solid #9baecb; padding: 12px 20px; border-radius: 10px; background: #202b40; color: #edf2ff; }
+.hebao-v23-controls { position: fixed; right: 14px; bottom: 12px; z-index: 240; display: flex; gap: 6px; padding: 7px; border: 1px solid var(--hebao-control-line); border-radius: 11px; background: var(--hebao-nav); box-shadow: 0 3px 18px #0002; }
+.hebao-v23-controls button { padding: 6px 10px; border: 1px solid var(--hebao-control-line); border-radius: 7px; color: var(--hebao-ink); background: var(--hebao-selection); font-size: 12px; }
+.hebao-v23-controls button:hover { background: var(--hebao-hover); }
+@media (max-width: 540px) { .hebao-v23-controls { gap: 4px; right: 6px; bottom: 6px; } .hebao-v23-controls button { padding: 5px 7px; } }
+
+/* Host controls use the current workbench theme; no new theme preference. */
+.hebao-arrival-skip { position:absolute;right:20px;bottom:18px;padding:8px 13px;border:1px solid #9baecb;border-radius:8px;background:#202b40e8;color:#edf2ff;cursor:pointer;font:inherit;font-size:13px; }
+.hebao-arrival-skip:hover,.hebao-arrival-resume:hover { background:#33415a; }
+.hebao-arrival-skip:focus-visible,.hebao-arrival-resume:focus-visible,.hebao-arrival-replay:focus-visible { outline:2px solid #8bb9ec;outline-offset:3px; }
+.hebao-arrival-replay { padding:5px 10px;border:1px solid var(--hebao-control-line);border-radius:7px;background:var(--hebao-nav);color:var(--hebao-ink);cursor:pointer;white-space:nowrap;font:inherit;font-size:12px; }
+.hebao-arrival-replay:hover { background:var(--hebao-hover); }
+@media (max-width:540px) { .hebao-arrival-skip { right:12px;bottom:12px; } }
