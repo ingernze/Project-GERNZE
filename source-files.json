@@ -3,6 +3,7 @@
   "purpose": "private_source_snapshot",
   "files": [
     ".gitignore",
+    "src/assets/styles/style2/F00.png",
     "Hecate_Voice_Module/README.md",
     "Hecate_Voice_Module/backend_self_test.py",
     "Hecate_Voice_Module/catalog.example.json",

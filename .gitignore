@@ -175,3 +175,6 @@
 !/src/workbench_host.py
 !/src/workbench_window.py
 !/tools/export_source.py
+!/src/assets/styles/
+!/src/assets/styles/style2/
+!/src/assets/styles/style2/F00.png
