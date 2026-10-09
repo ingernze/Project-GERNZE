@@ -10,9 +10,11 @@
 !/src/tests/
 !/src/workbench/
 !/src/assets/codex_monitor/
+!/src/assets/styles/
 !/src/tests/fixtures/
 !/src/workbench/static/
 !/src/workbench/tests/
+!/src/assets/styles/style2/
 !/.gitignore
 !/Hecate_Voice_Module/README.md
 !/Hecate_Voice_Module/backend_self_test.py
@@ -24,6 +26,8 @@
 !/Hecate_Voice_Module/voice_cli.py
 !/Hecate_Voice_Module/导入声音.cmd
 !/README.md
+!/docs/architecture.md
+!/docs/mobile-porting-handoff.md
 !/docs/source-package.md
 !/requirements-build.txt
 !/requirements-desktop.txt
@@ -34,6 +38,7 @@
 !/src/app.py
 !/src/assets/README.md
 !/src/assets/codex_monitor/QuietCodexMonitor.cs
+!/src/assets/styles/style2/F00.png
 !/src/autonomous_actions.py
 !/src/behavior_config.json
 !/src/blink_self_test.py
@@ -175,6 +180,3 @@
 !/src/workbench_host.py
 !/src/workbench_window.py
 !/tools/export_source.py
-!/src/assets/styles/
-!/src/assets/styles/style2/
-!/src/assets/styles/style2/F00.png
