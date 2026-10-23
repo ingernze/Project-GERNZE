@@ -1,6 +1,6 @@
-![Project GERNEZE：莉宝与项目图标](media/project-gerneze-banner.png)
+![Project GERNZE：莉宝与项目图标](media/project-gernze-banner.png)
 
-# Project GERNEZE
+# Project GERNZE
 
 **面向生活与学习的 AI伙伴，也是日常相伴的莉宝，甚至后续可以成为您独有的ai agent助手。**
 
@@ -170,10 +170,10 @@ Android 端可独立连接用户配置的 API，在日常使用时，可以独�
 
 | 平台或用途 | 下载文件 |
 | --- | --- |
-| Windows 基础程序 | [GERNEZE-windows-1.1.1.zip](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNEZE-windows-1.1.1.zip) |
-| Android 基础程序 | [GERNEZE-android-1.1.1.apk](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNEZE-android-1.1.1.apk) |
-| 可选 Codex 接入插件 | [GERNEZE-codex-1.0.0.zip](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNEZE-codex-1.0.0.zip) |
-| 公开源码 | [GERNEZE-source-1.1.1.zip](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNEZE-source-1.1.1.zip) |
+| Windows 基础程序 | [GERNZE-windows-1.1.1.zip](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.1/GERNZE-windows-1.1.1.zip) |
+| Android 基础程序 | [GERNZE-android-1.1.1.apk](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.1/GERNZE-android-1.1.1.apk) |
+| 可选 Codex 接入插件 | [GERNZE-codex-1.0.0.zip](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.1/GERNZE-codex-1.0.0.zip) |
+| 公开源码 | [GERNZE-source-1.1.1.zip](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.1/GERNZE-source-1.1.1.zip) |
 
 普通使用只需要对应平台的基础程序，其他插件可按需下载，不会在下载基础程序的时候自动一起安装。
 Windows 版解压后运行，保留同目录运行文件；Android 版按系统提示安装 APK。接入 API 对话时，在设置里填写自己的服务地址、模型与密钥。
