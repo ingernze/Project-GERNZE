@@ -1,5 +1,8 @@
-﻿param([string]$Message='GERNZE 1.1.1: desktop memory review, sync fixes and opening version')
+param([string]$Message='GERNZE 1.1.1: desktop memory review, sync fixes and opening version')
 $ErrorActionPreference='Stop'
+# Decode Git's UTF-8 paths consistently in Windows PowerShell and PowerShell.
+[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
+$OutputEncoding=[Console]::OutputEncoding
 $projectRoot=Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectRoot
 $manifest=Get-Content -LiteralPath (Join-Path $projectRoot 'source-files.json') -Raw -Encoding UTF8 | ConvertFrom-Json
