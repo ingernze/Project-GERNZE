@@ -170,10 +170,10 @@ Android 端可独立连接用户配置的 API，在日常使用时，可以独�
 
 | 平台或用途 | 下载文件 |
 | --- | --- |
-| Windows 基础程序 | [GERNZE_电脑骨架_1.1.1.zip](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNZE_%E7%94%B5%E8%84%91%E9%AA%A8%E6%9E%B6_1.1.1.zip) |
-| Android 基础程序 | [GERNZE_手机骨架_1.1.1.apk](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNZE_%E6%89%8B%E6%9C%BA%E9%AA%A8%E6%9E%B6_1.1.1.apk) |
-| 可选 Codex 接入插件 | [GERNZE_Codex插件_1.0.0.zip](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNZE_Codex%E6%8F%92%E4%BB%B6_1.0.0.zip) |
-| 公开源码 | [GERNZE_源码_1.1.1.zip](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNZE_%E6%BA%90%E7%A0%81_1.1.1.zip) |
+| Windows 基础程序 | [GERNEZE-windows-1.1.1.zip](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNEZE-windows-1.1.1.zip) |
+| Android 基础程序 | [GERNEZE-android-1.1.1.apk](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNEZE-android-1.1.1.apk) |
+| 可选 Codex 接入插件 | [GERNEZE-codex-1.0.0.zip](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNEZE-codex-1.0.0.zip) |
+| 公开源码 | [GERNEZE-source-1.1.1.zip](https://github.com/ingernze/Project-GERNEZE/releases/download/v1.1.1/GERNEZE-source-1.1.1.zip) |
 
 普通使用只需要对应平台的基础程序，其他插件可按需下载，不会在下载基础程序的时候自动一起安装。
 Windows 版解压后运行，保留同目录运行文件；Android 版按系统提示安装 APK。接入 API 对话时，在设置里填写自己的服务地址、模型与密钥。
