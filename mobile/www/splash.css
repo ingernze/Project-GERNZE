@@ -1,0 +1,15 @@
+.hebao-splash{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0c1220;color:#e9e8df;opacity:1;transition:opacity .38s cubic-bezier(.25,.1,.25,1);isolation:isolate;will-change:opacity}
+.hebao-splash[hidden]{display:none}.hebao-splash.leaving{opacity:0;pointer-events:none}
+.splash-lockup{display:flex;flex-direction:column;align-items:center}
+.splash-logo,.splash-name,.splash-en,.splash-note,.splash-version{opacity:0;transform:translate3d(0,7px,0);transition:opacity .65s ease,transform .82s cubic-bezier(.2,.7,.2,1);will-change:opacity,transform}
+.hebao-splash.entered .splash-logo,.hebao-splash.entered .splash-name,.hebao-splash.entered .splash-en,.hebao-splash.entered .splash-note,.hebao-splash.entered .splash-version{opacity:1;transform:translate3d(0,0,0)}
+.splash-logo{display:block;width:112px;height:112px;object-fit:contain;transition-delay:0s}
+.splash-name{font-size:25px;font-weight:400;letter-spacing:.3em;margin:22px 0 7px;padding-left:.3em;transition-delay:.18s}.splash-en{font-size:9px;letter-spacing:.46em;color:#8f9caf;padding-left:.46em;transition-delay:.18s}
+.splash-note{position:absolute;bottom:calc(13% + var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)));font-size:12px;letter-spacing:.09em;color:#a8b6ca;margin:0 20px;text-align:center;transition-delay:.36s}
+.shell[data-top-style] .brand-mark{width:44px;height:44px;flex-shrink:0;background:none;border:0;border-radius:0;box-shadow:none;padding:0}
+.shell[data-top-style] .brand-mark::before,.shell[data-top-style] .brand-mark::after{display:none}
+.shell .brand-icon{display:block;width:44px;height:44px;object-fit:contain}
+@media(prefers-reduced-motion:reduce){.splash-logo,.splash-name,.splash-en,.splash-note,.splash-version{transform:none;transition:opacity .15s;transition-delay:0s}.hebao-splash{transition:opacity .15s}}
+
+.splash-version{position:absolute;right:calc(18px + var(--safe-area-inset-right,env(safe-area-inset-right,0px)));bottom:calc(14px + var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)));font-size:10px;font-weight:400;line-height:1.4;letter-spacing:.06em;color:#8f9caf;transition-delay:.48s;pointer-events:none;user-select:none}
+@media(prefers-reduced-motion:reduce){.splash-version{transition-delay:0s}}

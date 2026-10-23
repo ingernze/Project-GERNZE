@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 import tkinter as tk
 from datetime import datetime
-from hecate_ui import (BG, PANEL, INK, MUTED, GOLD, BORDER, ERROR, Button, Switch,
+from ui_theme import (BG, PANEL, INK, MUTED, GOLD, BORDER, ERROR, Button, Switch,
                        ScrollFrame, configure_window, header, font, label)
-from hebao_quota.local_snapshot import LocalHistory, history_view
+from usage_monitor.local_snapshot import LocalHistory, history_view
 
 NAVY = BG
 
@@ -54,7 +54,7 @@ def overview_view(state, previous=None):
 class QuotaOverview(tk.Toplevel):
     def __init__(self, parent, *, on_deepseek, on_read, on_toggle, on_close):
         super().__init__(parent)
-        configure_window(self, '赫宝 · 额度总览', 740, 550, (580, 380))
+        configure_window(self, '莉宝 · 额度总览', 740, 550, (580, 380))
         self.attributes('-topmost', True)
         self.protocol('WM_DELETE_WINDOW', on_close)
         self.bind('<Escape>', lambda _: on_close())

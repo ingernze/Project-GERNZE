@@ -1,6 +1,8 @@
+> 2026-10-20 状态更新：本文下方较早阶段的计划不代表现状。现已存在 Android 工程、手机独立 API、四层记忆和共享书架；以 README、现行源码及 docs/release-1.1.0.md 为准。真机、真实模型和全部机型适配仍需分别验收。
+
 # 给移动端评估AI的交接说明
 
-日期：2026-10-09。用户希望你依据当前赫宝源码评估手机版。本轮交付源码和结构说明，不代表已有Android／iOS实现。先读 [结构地图](architecture.md)，再按下表读取目标模块。
+日期：2026-10-09。用户希望你依据当前莉宝源码评估手机版。本轮交付源码和结构说明，不代表已有Android／iOS实现。先读 [结构地图](architecture.md)，再按下表读取目标模块。
 
 ## 先确认产品形态
 
@@ -22,7 +24,7 @@
 
 ## 已确认的Windows／GPU耦合
 
-- `app.py`、`deepseek_trial.py`、`tray_win32.py`、`win_bridge.py`及部分窗口控制使用Tkinter、pywin32、Win32／ctypes接口。
+- `app.py`、`desktop_main.py`、`tray_win32.py`、`win_bridge.py`及部分窗口控制使用Tkinter、pywin32、Win32／ctypes接口。
 - `workbench_window.py`启动电脑上的Edge／Chrome应用窗口，不能当作手机WebView宿主。
 - `credential_store.py`及声音API存储使用Windows凭据管理器；手机必须使用对应安全存储接口。
 - `scene_voice.py`使用Windows音频播放；`engine_worker.py`使用msvcrt进程锁。

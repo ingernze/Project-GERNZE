@@ -59,7 +59,7 @@ class TrayIcon(threading.Thread):
             wc.lpfnWndProc = self.wndproc
             win32gui.RegisterClass(wc)
             self.hwnd = win32gui.CreateWindow(
-                TRAY_CLASS, "赫宝桌宠托盘", 0, 0, 0, 0, 0, 0, 0, hinstance, None
+                TRAY_CLASS, "莉宝桌宠托盘", 0, 0, 0, 0, 0, 0, 0, hinstance, None
             )
             self.icon = win32gui.LoadImage(
                 0, str(self.icon_path), win32con.IMAGE_ICON, 16, 16,
@@ -68,7 +68,7 @@ class TrayIcon(threading.Thread):
             nid = (
                 self.hwnd, self.icon_id,
                 win32gui.NIF_MESSAGE | win32gui.NIF_ICON | win32gui.NIF_TIP,
-                CALLBACK, self.icon, "赫宝桌宠",
+                CALLBACK, self.icon, "莉宝桌宠",
             )
             win32gui.Shell_NotifyIcon(win32gui.NIM_ADD, nid)
             self.logger("tray_ready", hwnd=self.hwnd, icon=str(self.icon_path))
@@ -113,7 +113,7 @@ class TrayIcon(threading.Thread):
         menu = win32gui.CreatePopupMenu()
         try:
             for command, label in [
-                (SHOW, "显示赫宝"), (HIDE, "隐藏赫宝"),
+                (SHOW, "显示莉宝"), (HIDE, "隐藏莉宝"),
                 (MUTE, "切换静音"), (SIZE_1, "大小 1×"),
                 (SIZE_2, "大小 2×"), (SIZE_3, "大小 3×"),
                 (QUOTA, "DeepSeek 额度设置"),

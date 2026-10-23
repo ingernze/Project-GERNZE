@@ -7,7 +7,7 @@ const {spawn}=require('node:child_process');
 const {JSDOM}=require('jsdom');
 const project=path.resolve(__dirname,'../..');
 const staticDir=path.join(project,'workbench/static');
-const scriptNames=['theme.js','layout.js','runtime.js','frame.js','example.js','modules.js','app.js'];
+const scriptNames=['theme.js','layout.js','runtime.js','frame.js','example.js','scene.js','modules.js','app.js'];
 const tick=()=>new Promise(r=>setImmediate(r));
 async function until(check){const end=Date.now()+8000;while(Date.now()<end){if(check())return;await tick();}throw new Error('UI settlement timeout');}
 async function setup(t){

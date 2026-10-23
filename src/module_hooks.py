@@ -15,7 +15,7 @@ class ModuleHooks:
             raise RuntimeError("桌宠模块已退出")
         if self.controller is None:
             if self.factory is None:
-                from hebao_modules.ui import ModuleController
+                from libao_modules.ui import ModuleController
                 self.factory = ModuleController
             self.controller = self.factory(self.root, self.data_dir)
         return self.controller

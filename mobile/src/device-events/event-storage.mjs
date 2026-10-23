@@ -1,0 +1,10 @@
+import {clone,emptyState,state,failure} from './event-contract.mjs';
+// Atomic single-snapshot CAS. A resolved commit means IndexedDB transaction completion,
+// not just a successful put request. No localStorage fallback on failure/corruption.
+export function createIndexedEventStorage({indexedDB=globalThis.indexedDB,name='hecate-device-events-v1'}={}){
+  let opening;
+  function open(){if(!indexedDB)throw failure('storage_failed');return opening??=new Promise((resolve,reject)=>{const r=indexedDB.open(name,1);r.onupgradeneeded=()=>r.result.createObjectStore('state');r.onerror=()=>reject(failure('storage_failed'));r.onblocked=()=>reject(failure('storage_failed'));r.onsuccess=()=>{r.result.onversionchange=()=>r.result.close();resolve(r.result);};});}
+  async function load(){try{const db=await open();return await new Promise((resolve,reject)=>{const tx=db.transaction('state','readonly');let value;const r=tx.objectStore('state').get('inbox');r.onsuccess=()=>{value=r.result;};tx.oncomplete=()=>{try{resolve(clone(state(value===undefined?emptyState():value)));}catch{reject(failure('storage_failed'));}};tx.onabort=tx.onerror=()=>reject(failure('storage_failed'));});}catch{throw failure('storage_failed');}}
+  async function commit(expectedRevision,next){state(next);if(next.revision!==expectedRevision+1)throw failure('storage_failed');try{const db=await open();await new Promise((resolve,reject)=>{const tx=db.transaction('state','readwrite',{durability:'strict'});let conflict=false;if(tx.durability!=='strict'){tx.abort();reject(failure('storage_failed'));return;}const store=tx.objectStore('state'),r=store.get('inbox');r.onsuccess=()=>{try{const old=state(r.result===undefined?emptyState():r.result);if(old.revision!==expectedRevision){conflict=true;tx.abort();return;}store.put(clone(next),'inbox');}catch{tx.abort();}};tx.oncomplete=()=>resolve();tx.onabort=tx.onerror=()=>reject(failure(conflict?'storage_conflict':'storage_failed'));});}catch(e){throw e.code==='storage_conflict'?e:failure('storage_failed');}}
+  return Object.freeze({load,commit,async close(){if(opening)(await opening).close();}});
+}

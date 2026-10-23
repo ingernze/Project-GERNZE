@@ -4,7 +4,7 @@ import tkinter as tk
 class ActionControls(tk.Toplevel):
     def __init__(self,pet):
         super().__init__(pet.root);self.pet=pet
-        self.title('赫宝 · 动作试装')
+        self.title('莉宝 · 动作试装')
         self.configure(bg='#111c30');self.resizable(False,False)
         self.attributes('-topmost',True);self.protocol('WM_DELETE_WINDOW',self.close)
         self.status=tk.StringVar(value='候选动作，观感等待你确认')

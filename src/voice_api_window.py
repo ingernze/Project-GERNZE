@@ -2,7 +2,7 @@
 import tkinter as tk
 from tkinter import ttk
 from urllib.parse import urlsplit
-from hecate_ui import BG, PANEL, INK, MUTED, QUIET, ERROR, GOOD, PREFIX, font, label, header, Button, Switch, ScrollFrame, panel, configure_window
+from ui_theme import BG, PANEL, INK, MUTED, QUIET, ERROR, GOOD, PREFIX, font, label, header, Button, Switch, ScrollFrame, panel, configure_window
 
 
 class VoiceAPIWindow(tk.Toplevel):
@@ -11,7 +11,7 @@ class VoiceAPIWindow(tk.Toplevel):
         super().__init__(pet.root)
         self.pet = pet
         self.closed = False
-        configure_window(self, '赫宝 · 声音专用 API', 670, 620, (540, 400))
+        configure_window(self, '莉宝 · 声音专用 API', 670, 620, (540, 400))
         self.protocol('WM_DELETE_WINDOW', self.close)
         self.bind('<Escape>', lambda _: self.close())
         header(self, '声音专用 API', '这里的设置只用于声音对话。输入文字直接朗读时不需要它。')
@@ -113,7 +113,7 @@ def open_voice_api(pet):
         window = VoiceAPIWindow(pet)
     except (OSError, ValueError, RuntimeError):
         from tkinter import messagebox
-        messagebox.showerror('赫宝 · 声音', '声音设置暂时无法读取，请检查独立语音模块。', parent=pet.root)
+        messagebox.showerror('莉宝 · 声音', '声音设置暂时无法读取，请检查独立语音模块。', parent=pet.root)
         return
     pet.voice_api_window = window
     return window

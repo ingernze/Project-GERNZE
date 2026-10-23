@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
-from hebao_quota.local_snapshot import read_local_history, history_view
+from usage_monitor.local_snapshot import read_local_history, history_view
 
 NOW = 1791005200
 

@@ -2,7 +2,7 @@
 import queue, threading, tkinter as tk
 from tkinter import filedialog, messagebox
 from pathlib import Path
-from hecate_ui import configure_window, header, label, Button, panel, BG, MUTED
+from ui_theme import configure_window, header, label, Button, panel, BG, MUTED
 from optional_modules import IDS
 
 def open_packages(pet):
@@ -14,8 +14,8 @@ class PackageWindow(tk.Toplevel):
     def __init__(self, pet):
         super().__init__(pet.root);self.pet=pet;self.manager=pet.optional_modules
         self.busy=False;self.results=queue.SimpleQueue();self.job=None
-        configure_window(self,'赫宝 · 安装与移除模块',680,640,minimum=(580,600))
-        header(self,'可选模块','选择单独下载的模块 ZIP 安装；移除功能时保留个人记录。').pack(fill='x')
+        configure_window(self,'莉宝 · 安装与移除模块',680,640,minimum=(580,600))
+        header(self,'可选模块','固定台词随骨架保留；这里只安装或移除学习、语音生成功能。').pack(fill='x')
         self.content=tk.Frame(self,bg=BG);self.content.pack(fill='both',expand=True,padx=20,pady=10)
         self.status=label(self,'',color=MUTED);self.status.pack(fill='x',padx=20,pady=8)
         self.install_button=Button(self,text='选择模块 ZIP 安装',command=self.pick);self.install_button.pack(pady=(0,15))
@@ -46,7 +46,7 @@ class PackageWindow(tk.Toplevel):
 
     def pick(self):
         if not self.safe_to_change():return
-        path=filedialog.askopenfilename(parent=self,title='选择赫宝可选模块 ZIP',filetypes=[('赫宝模块','*.zip')])
+        path=filedialog.askopenfilename(parent=self,title='选择莉宝可选模块 ZIP',filetypes=[('莉宝模块','*.zip')])
         if path:self.run(lambda:self.manager.install(path))
 
     def remove(self,key):

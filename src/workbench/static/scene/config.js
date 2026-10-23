@@ -1,0 +1,2 @@
+window.PORTRAIT_CONFIG={fps:24,dpr:1.5};
+window.PORTRAIT_ASSETS={"closed.png": "closed.png", "eye-white-v2.png": "eye-white-v2.png", "half.png": "half.png", "original.png": "original.png", "underlayer.png": "underlayer.png"};

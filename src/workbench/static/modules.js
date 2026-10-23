@@ -63,12 +63,12 @@ async function download(ctx,name,body,type='application/json') {
 async function home(rootEl,ctx) {
   if(missingModule(rootEl,ctx,'cet6','中国英语六级学习'))return;
   const p=h('div','home-stage');const stack=h('div','home-content');p.append(stack);rootEl.append(p);
-  const mark=h('img','hero-mark');mark.src='mark.svg';mark.alt='赫宝的怀表';
+  const mark=h('img','hero-mark');mark.src='mark.svg';mark.alt='莉宝的怀表';
   stack.append(mark,h('div','home-heading','今天，从哪里开始？'),h('p','hero-caption','把卡住的一步，慢慢弄明白。'));
   const body=h('div','home-body'); const workspace=h('div','space-row');
   const place=button(ctx,'我的学习空间',()=>ctx.navigate('study'),'space-button');place.prepend(icon('book',15));workspace.append(place);body.append(workspace);
   const card=h('div','import-surface'); const text=h('textarea','home-text');
-  text.setAttribute('aria-label','阅读材料'); text.placeholder='粘贴阅读材料，或导入附带答案与解析的题目 JSON。\n赫宝会帮你记下进度，再准备好给网页 GPT 的提示词。';
+  text.setAttribute('aria-label','阅读材料'); text.placeholder='粘贴阅读材料，或导入附带答案与解析的题目 JSON。\n莉宝会帮你记下进度，再准备好给网页 GPT 的提示词。';
   text.value=ctx.drafts.home || '';ctx.scope.listen(text,'input',()=>{ctx.drafts.home=text.value;});card.append(text);
   const controls=h('div','import-controls');const tools=h('div','import-tools');
   const file=h('input');file.type='file';file.accept='.json,.txt';file.hidden=true; card.append(file);
@@ -99,7 +99,7 @@ async function home(rootEl,ctx) {
     const stat=h('span','',label);stat.prepend(h('strong','',String(value)));stats.append(stat);
   }
   stack.append(stats);
-  rootEl.append(h('div','home-bottom',ctx.preview?'界面预览 · 不写入学习数据':'学习的节奏由你决定。成绩不会影响赫宝和你的关系。'));
+  rootEl.append(h('div','home-bottom',ctx.preview?'界面预览 · 不写入学习数据':'学习的节奏由你决定。成绩不会影响莉宝和你的关系。'));
 }
 async function study(rootEl,ctx) {
   if(missingModule(rootEl,ctx,'cet6','中国英语六级学习'))return;
@@ -261,18 +261,11 @@ async function progress(rootEl,ctx) {
   for(const item of history)content.append(row(outcomes[item.outcome],date(item.recorded_at)+' · '+(item.minutes>0?item.minutes+' 分钟（旧记录）':'学时未记录'),item.tags.join(' · ') || item.note));
 }
 async function memory(rootEl,ctx) {
-  const content=page(rootEl,'项目记录','记录想法、决定与进度。项目日志不会自动变成人物记忆。');
-  const form=h('section','surface');const title=input(ctx,'标题',ctx.drafts.logTitle || '','text',v=>ctx.drafts.logTitle=v);
-  const body=input(ctx,'正文',ctx.drafts.logBody || '','textarea',v=>ctx.drafts.logBody=v);
-  const status=h('select','select-input');status.setAttribute('aria-label','决定状态');
-  for(const [value,label] of [['candidate','候选想法'],['adopted','已采用'],['deferred','待定'],['rejected','不采用']]){const opt=h('option','',label);opt.value=value;status.append(opt);}
-  form.append(title.wrap,body.wrap,status,button(ctx,'确认保存项目记录',async()=> {
-    await ctx.call('memory.save',{title:title.el.value,body:body.el.value,decision:status.value});if(ctx.signal.aborted)return;
-    ctx.drafts.logTitle='';ctx.drafts.logBody='';await ctx.refresh();if(!ctx.signal.aborted)ctx.navigate('memory');
-  },'button primary'));content.append(form);
+  const content=page(rootEl,'旧项目记录','只读保留历史资料与原确认标记，不自动进入新版第二层。');
+  content.append(h('p','subtle','新版记忆请从设置的“记忆与原文”查看；聊天原文也可从对话右下角的记忆书架查看；旧资料仍可在备份页导出。'));
   const records=await ctx.call('memory.list',{});if(ctx.signal.aborted)return;
-  if(!records.length)content.append(h('div','empty-message','还没有项目记录。'));
-  for(const item of records)content.append(row(item.title,date(item.created_at)+' · '+item.decision,item.body));
+  if(!records.length)content.append(h('div','empty-message','没有旧项目记录。'));
+  for(const item of records)content.append(row(item.title,(item.created_at?date(item.created_at):'日期不明')+' · '+item.decision+' · 旧资料（只读）',item.body));
 }
 async function reminders(rootEl,ctx) {
   const content=page(rootEl,'提醒','先查看已经保存的提醒。通知开关与安静模式继续由桌宠管理。');
@@ -286,7 +279,7 @@ async function backup(rootEl,ctx) {
   const card=h('section','surface');card.append(h('h2','','导出本地记录'),h('p','subtle','导出题目、学习提交、项目记录、提醒和交接信息。文件由浏览器下载保存。'));
   const action=button(ctx,'导出 JSON 备份',async()=> {
     const value=await ctx.call('backup.export',{});if(ctx.signal.aborted)return;
-    await download(ctx,'赫宝_本地记录_'+new Date().toISOString().slice(0,10)+'.json',value.json);
+    await download(ctx,'莉宝_本地记录_'+new Date().toISOString().slice(0,10)+'.json',value.json);
   },'button primary');if(ctx.preview)action.disabled=true;card.append(action);content.append(card);
   content.append(h('p','subtle','桌宠原有的 SQLite 备份入口继续可用。工作台不会读取任意系统目录。'));
 }
@@ -320,7 +313,7 @@ async function extensions(rootEl,ctx) {
     ];
     return [...current,...reserved.filter(item=>!ctx.registry.modules.has(item.id))];
   };
-  const moduleKeys=item=>item.id==='voice'?['fixed_voice','voice_engine']:(item.navigationGroup==='learning'&&!item.pending?['cet6']:[]);
+  const moduleKeys=item=>item.id==='voice'?['voice_engine']:(item.navigationGroup==='learning'&&!item.pending?['cet6']:[]);
   const installState=key=>installed[key]===true?'已安装':installed[key]===false?'未安装':'待确认';
   const stateFor=item=>{
     if(item.pending)return '待接入';
@@ -330,11 +323,11 @@ async function extensions(rootEl,ctx) {
     if(present)return '部分安装';
     return keys.every(key=>installed[key]===false)?'未安装':'待确认';
   };
-  const descriptionFor=item=>item.id==='voice'?'固定台词、文字朗读与声音专用 API。':item.id==='study'?'中国英语六级 · 纸质复盘与答疑':item.description || '已接入工作台';
+  const descriptionFor=item=>item.id==='voice'?'文字转语音与声音专用 API；固定台词由骨架提供。':item.id==='study'?'中国英语六级 · 纸质复盘与答疑':item.description || '已接入工作台';
   const addInstallInfo=(target,item,viewCtx,{components=true,manage=true}={})=>{
     if(components&&item.id==='voice'){
       const components=h('div','module-components');
-      for(const [key,title] of [['fixed_voice','固定场景语音'],['voice_engine','本地文字转语音']])components.append(h('p','module-component',title+' · '+installState(key)));
+      for(const [key,title] of [['voice_engine','语音生成与声音 API']])components.append(h('p','module-component',title+' · '+installState(key)));
       target.append(components);
     }
     if(manage&&(item.id==='study'||item.id==='voice')){
@@ -374,7 +367,7 @@ async function extensions(rootEl,ctx) {
     const map=h('div','module-map');
     const apex=h('div','module-map-apex');const top=h('div','module-map-root');
     const mark=h('img','brand-mark');mark.src='mark.svg';mark.alt='';
-    top.append(mark,h('div','module-map-root-title','赫宝工作台'),h('span','module-map-root-caption','模块的共同入口'));apex.append(top);map.append(apex);
+    top.append(mark,h('div','module-map-root-title','莉宝工作台'),h('span','module-map-root-caption','模块的共同入口'));apex.append(top);map.append(apex);
     const learning=items.filter(item=>item.navigationGroup==='learning');
     const peers=items.filter(item=>item.navigationGroup!=='learning'&&!(item.id==='custom'&&item.pending));
     const branches=learning.length?[{id:'learning',title:'学习',icon:'book',children:learning},...peers]:peers;
@@ -416,23 +409,23 @@ async function extensions(rootEl,ctx) {
   ctx.scope.own(ctx.registry.subscribe(render));render();
 }
 async function voice(rootEl,ctx) {
-  const content=page(rootEl,'声音','固定台词和文字说话，沿用你已经选定的两套声音。');
+  const content=page(rootEl,'声音','固定台词随骨架保留；文字转语音和声音专用 API 按需安装。');
   const status=h('p','study-status');status.setAttribute('role','status');content.append(status);
   let available=false;
-  if(ctx.preview)status.textContent='这是界面预览。请从桌面赫宝打开工作台，使用声音模块。';
+  if(ctx.preview)status.textContent='这是界面预览。请从桌面莉宝打开工作台，使用声音模块。';
   else {
     try { available=Boolean((await ctx.call('voice.available',{})).available); }
     catch(error) { if(ctx.signal.aborted)return;status.textContent=error.message; }
     if(ctx.signal.aborted)return;
-    if(!status.textContent)status.textContent=available?'已连接桌面声音模块。打开窗口后再选择播放，不会自动出声。':'请从桌面赫宝打开工作台，使用声音模块。';
+    if(!status.textContent)status.textContent=available?'已连接桌面声音模块。打开窗口后再选择播放，不会自动出声。':'请从桌面莉宝打开工作台，使用声音模块。';
   }
   const grid=h('div','study-entry-grid');content.append(grid);
   for(const [title,description,command,text] of [
-    ['01 · 固定场景语音','查看已收录台词、触发场景和当前音量，选中后试听。','voice.fixed','打开固定语音'],
+    ['01 · 固定台词（骨架内置）','查看已收录台词、触发场景和音量；无需安装语音生成模块。','voice.fixed','打开固定语音'],
     ['02 · 文字与 API 说话','输入文字直接朗读；也可以让声音专用 API 回复。GPT、SoVITS 和参考音频分别选择。','voice.text','打开文字说话'],
   ]) {
     const card=h('section','surface');card.append(h('h2','',title),h('p','subtle',description));
-    const absent=ctx.state?.().optional_modules?.[command==='voice.fixed'?'fixed_voice':'voice_engine']===false;
+    const absent=command!=='voice.fixed'&&ctx.state?.().optional_modules?.voice_engine===false;
     const open=button(ctx,absent?'安装声音模块':text,async()=>{
       await ctx.call(absent?'modules.open':command,{});if(!ctx.signal.aborted)status.textContent='已请求打开桌面声音窗口；播放由你操作。';
     },'button primary');open.disabled=!available;card.append(open);grid.append(card);
@@ -450,12 +443,12 @@ async function activityTiming(content,ctx) {
   const panel=h('div','timing-panel');disclosure.append(toggle,panel);section.append(disclosure);
   const status=h('p','timing-status','正在读取桌宠设置……');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
   panel.append(status);content.append(section);
-  if(ctx.preview){status.textContent='请从桌面赫宝打开工作台，调整眨眼、摆腿与睡眠。';return;}
+  if(ctx.preview){status.textContent='请从桌面莉宝打开工作台，调整眨眼、摆腿与睡眠。';return;}
   let snapshot;
   try{snapshot=await ctx.call('behavior.get',{});}
   catch(error){if(!ctx.signal.aborted){status.textContent=error.message;status.setAttribute('role','alert');}return;}
   if(ctx.signal.aborted)return;
-  if(!snapshot.available){status.textContent='请从桌面赫宝打开工作台，调整眨眼、摆腿与睡眠。';return;}
+  if(!snapshot.available){status.textContent='请从桌面莉宝打开工作台，调整眨眼、摆腿与睡眠。';return;}
   const values={...snapshot.settings,...(ctx.drafts.activityTiming || {})};const controls={};
   const form=h('form','timing-form');ctx.scope.listen(form,'submit',event=>event.preventDefault());
   let rangeIssue=false;
@@ -523,6 +516,103 @@ async function activityTiming(content,ctx) {
   validateRanges(true);
 }
 
+// Layout wrapper only: retain the original scene renderer, controls and disposal.
+function sceneView(rootEl,ctx,mode) {
+  const stage=h('div','desktop-scene-stage');stage.dataset.sceneMode=mode;rootEl.append(stage);
+  root.HecateScene.mount(stage,ctx);
+  const page=stage.querySelector('.scene-page'),room=stage.querySelector('.scene-room');
+  const tools=page.querySelector('.scene-tools');tools.hidden=true;tools.inert=true;
+  const title=page.querySelector('.scene-heading h1');title.textContent='人物场景';
+  page.querySelector('.scene-heading p').textContent='窗边暮色';
+  if(tools){
+    // Reuse accepted controls and their existing busy/paused/sleep guards.
+    // This supplies visible idle gestures without modifying the renderer or pose files.
+    const buttons=[...tools.querySelectorAll('button')];
+    const preferences=ctx.drafts.scenePresentation??={natural:true,paused:false,breathing:'1.6'};
+    const pause=buttons.find(b=>['暂停动作','继续动作'].includes(b.textContent)),breathing=tools.querySelector('select');
+    if(breathing)breathing.value=preferences.breathing;
+    const gentle=buttons.find(b=>b.textContent==='轻晃一下'),sway=buttons.find(b=>b.textContent==='摆摆腿');
+    const indicator=h('span','desktop-motion-label','动态加载中');indicator.role='status';room.append(indicator);
+    const portrait=page.querySelector('.scene-portrait'),action=page.querySelector('.scene-action'),status=tools.querySelector('span.scene-status');
+    let nextAt=0,nextSway=false,hadReady=false,timer=null;
+    const label=()=>{
+      if(ctx.scope.closed)return;
+      const failure=/超时|没有|失败/.test(status?.textContent||'');
+      indicator.classList.toggle('is-error',failure);
+      indicator.textContent=failure?'动态未启动 · 在设置中重新加载':!action.hidden?'小动作播放中':!portrait.hidden?'动态待机 · 呼吸 / 眨眼':'动态加载中';
+    };
+    // Observe only original controls, so updates to our label cannot feed back.
+    const observer=new MutationObserver(label);observer.observe(portrait,{attributes:true,attributeFilter:['hidden']});observer.observe(action,{attributes:true,attributeFilter:['hidden']});observer.observe(status,{childList:true,characterData:true,subtree:true});
+    const tick=()=>{
+      if(ctx.scope.closed)return;label();
+      const now=performance.now();
+      if(!document.hidden){
+        if(pause&&!pause.disabled&&((pause.textContent==='继续动作')!==preferences.paused))pause.click();
+        const requested=ctx.drafts.sceneAction;
+        if(requested){
+          const target=buttons.find(b=>b.textContent===requested);
+          if(target&&!target.disabled){delete ctx.drafts.sceneAction;target.click();nextAt=now+12000;}
+        }
+      }
+      if(!stage.classList.contains('is-chat-view')&&!document.hidden&&preferences.natural&&!preferences.paused){
+        if(!portrait.hidden&&!hadReady){hadReady=true;nextAt=now+1000;}
+        if(hadReady&&sway.disabled){nextAt=Math.max(nextAt,now+5000);}
+        if(hadReady&&!sway.disabled&&now>=nextAt){
+          const target=nextSway?sway:gentle;
+          if(target&&!target.disabled){target.click();nextSway=!nextSway;nextAt=now+12000;}
+        }
+      }
+      timer=setTimeout(tick,400);
+    };
+    ctx.scope.listen(document,'visibilitychange',()=>{nextAt=performance.now()+3000;});
+    tick();ctx.scope.own(()=>{clearTimeout(timer);observer.disconnect();indicator.remove();});
+  }
+  const dialogue=page.querySelector('.desktop-dialogue');room.append(dialogue);
+  const conversation=page.GernzeSceneConversation;
+  const begin=h('button','scene-start-conversation','开始对话');begin.type='button';begin.setAttribute('aria-expanded','false');room.append(begin);
+  ctx.scope.listen(begin,'click',()=>conversation.open());
+  ctx.scope.listen(stage,'gernze:conversation-visibility',e=>{begin.hidden=e.detail.open;begin.setAttribute('aria-expanded',String(e.detail.open));if(!e.detail.open)begin.focus();});
+  const shelf=h('div','scene-floor-shelf scene-arch-shelf');shelf.tabIndex=0;shelf.setAttribute('role','button');shelf.setAttribute('aria-label','打开记忆书架');
+  const art=h('div','scene-shelf-art');art.dataset.memoryLayout='gold';art.inert=true;art.setAttribute('aria-hidden','true');shelf.append(art);room.append(shelf);
+  const mini=root.HebaoMemoryBooks.mount({container:art,source:{
+    listMonths:async({signal})=>{const rows=await ctx.call('chat.books.months',{},signal);return rows.sort((a,b)=>b.month.localeCompare(a.month)).slice(0,3);},
+    listDays:({month,signal})=>ctx.call('chat.books.days',{month},signal),loadDay:({day,signal})=>ctx.call('chat.books.day',{day},signal)
+  },timeZone:'Asia/Shanghai'});
+  mini.open();
+  const fit=()=>{art.style.transform='scale('+((shelf.getBoundingClientRect().width||340)/520)+')';};
+  const shelfSize=new ResizeObserver(fit);shelfSize.observe(shelf);fit();
+  ctx.scope.listen(shelf,'click',()=>conversation.openBooks());
+  ctx.scope.listen(shelf,'keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();conversation.openBooks();}});
+  const physics=root.GernzeSceneJelly.mount(room,{scope:ctx.scope,obstacle:shelf});
+  ctx.scope.own(()=>{shelfSize.disconnect();mini.destroy();});
+  ctx.scope.listen(stage,'gernze:open-settings',()=>ctx.navigate('settings',{group:'chat'}));
+  ctx.scope.own(()=>stage.remove());
+}
+
+function sceneSettings(section,ctx){
+  const preferences=ctx.drafts.scenePresentation??={natural:true,paused:false,breathing:'1.6'};
+  const box=h('fieldset','timing-group desktop-scene-settings');box.append(h('legend','','人物展示'));
+  const actions=h('div','desktop-scene-setting-actions');
+  for(const label of ['睡一会儿','摆摆腿','摸摸头','轻晃一下','换句台词']){
+    const b=h('button','scene-button',label);b.type='button';
+    if(label==='睡一会儿'){b.disabled=true;ctx.call('behavior.get',{},ctx.signal).then(v=>{if(!ctx.scope.closed)b.disabled=!v.sleep_available;}).catch(()=>{});}
+    ctx.scope.listen(b,'click',()=>{preferences.paused=false;ctx.drafts.sceneAction=label;ctx.navigate('scene');});actions.append(b);
+  }
+  const reload=h('button','scene-button','重新加载人物');reload.type='button';ctx.scope.listen(reload,'click',()=>ctx.navigate('scene'));actions.append(reload);
+  box.append(h('p','subtle','点击小动作后返回人物页播放。'),actions);
+  function toggle(label,key,cls){
+    const row=h('div','theme-setting-row');row.append(h('h3','',label));
+    const b=h('button','theme-switch '+cls);b.type='button';b.setAttribute('role','switch');b.setAttribute('aria-label',label);
+    const thumb=h('span','theme-switch-thumb');thumb.append(icon('moon',15));b.append(thumb);
+    const paint=()=>b.setAttribute('aria-checked',String(preferences[key]));paint();
+    ctx.scope.listen(b,'click',()=>{preferences[key]=!preferences[key];paint();});row.append(b);box.append(row);
+  }
+  toggle('自然小动作','natural','desktop-natural-motion');toggle('暂停人物动作','paused','desktop-pause-motion');
+  const row=h('label','desktop-breathing-setting'),select=h('select','scene-button');select.setAttribute('aria-label','呼吸幅度');
+  for(const [value,label] of [['1.3','轻微'],['1.6','明显']]){const o=h('option','',label);o.value=value;select.append(o)}select.value=preferences.breathing;
+  ctx.scope.listen(select,'change',()=>{preferences.breathing=select.value});row.append(h('span','','呼吸幅度'),select);box.append(row);section.prepend(box);
+}
+
 async function settings(rootEl,ctx) {
   const content=page(rootEl,'工作台设置','保持简单，安静运行。');
   const appearance=h('section','surface');appearance.append(h('h2','','外观主题'));
@@ -548,22 +638,40 @@ async function settings(rootEl,ctx) {
   });
   await activityTiming(content,ctx);
   if(ctx.signal.aborted)return;
+  sceneSettings(content.querySelector('.activity-timing'),ctx);
+  const mobile=h('section','surface');mobile.append(h('h2','','手机更新'),h('p','subtle','电脑连上手机热点后，打开更新窗口，用手机莉宝扫描二维码配对。'));
+  const mobileStatus=h('p','subtle','首次配对后，手机可以直接检查电脑发布的新版本。');mobileStatus.setAttribute('role','status');
+  const mobileButton=button(ctx,'打开手机更新',async()=>{
+    const result=await ctx.call('mobile_updates.open',{});
+    if(!ctx.signal.aborted)mobileStatus.textContent=result.alreadyOpen?'更新窗口已经打开。可扫描其中的配对码。':'更新窗口已打开，正在准备二维码。';
+  });mobileButton.disabled=Boolean(ctx.preview);mobile.append(mobileButton,mobileStatus);content.append(mobile);
   const about=h('section','surface');about.append(h('h2','','模块入口'),h('p','subtle','学习、进度与记录共用一个工作台。右侧显示当前需要的提示；新模块可以沿用统一入口。'));
   content.append(about);
+  const chatHost=h('section','surface desktop-connection-settings');content.insertBefore(chatHost,mobile);
+  root.HecateSceneChat.mountSettings(chatHost,{scope:ctx.scope,call:ctx.call});
+  const memoryHost=h('section','surface');content.insertBefore(memoryHost,mobile);
+  root.HecateSceneMemory.mount(memoryHost,{scope:ctx.scope,call:ctx.call,settingsOnly:true,onOpen:()=>ctx.call('chat.cancel',{}).catch(()=>{})});
+  const extras=[...content.querySelectorAll(':scope > .surface')].filter(p=>![appearance,mobile,about,memoryHost,chatHost].includes(p));
+  const panels=[[appearance,'外观与显示','主题与显示方式'],...extras.map(p=>[p,'人物互动','原有动作与时间设置']),[chatHost,'聊天连接','接口、模型与本机密钥'],[memoryHost,'记忆与原文','分层、审查与保存状态'],[mobile,'电脑与手机更新','沿用原配对和更新入口'],[about,'模块说明','当前工作台入口']];
+  panels.forEach(([panel,label,hint])=>{const group=h('details','desktop-settings-group'),summary=h('summary','',label);summary.append(h('small','',hint));group.append(summary);content.insertBefore(group,panel);group.append(panel);
+    if(panel===chatHost&&ctx.payload?.group==='chat'){group.open=true;summary.tabIndex=-1;summary.focus();}
+  });
 }
+
 function register(registry) {
   const entries=[
     ['home','首页','home',home,['lesson.import','modules.open'],0],
+    ['scene','人物场景','moon',(el,ctx)=>sceneView(el,ctx,'room'),['chat.config.get','chat.config.set','chat.key.delete','chat.reply','chat.cancel','chat.history','chat.memory.list','chat.books.months','chat.books.days','chat.books.day','chat.books.undated','chat.books.status','chat.layers.get','chat.layers.decide','chat.layers.correct','chat.layers.withdraw','chat.layers.settings','behavior.get','voice.scene_sleep','voice.scene_wake','voice.scene_stop'],5],
     ['study','六级学习','book',study,['daily.workspace','daily.prompt','daily.save','modules.open'],10,'learning'],
     ['progress','学习进度','chart',progress,['study.history','modules.open'],20,'learning'],
-    ['memory','项目记录','note',memory,['memory.list','memory.save'],30],
+    ['memory','项目记录','note',memory,['memory.list'],30],
     ['reminders','提醒','clock',reminders,['reminder.list'],40],
     ['backup','备份与资料','box',backup,['backup.export'],50],
     ['voice','声音','audio',voice,['voice.available','voice.fixed','voice.text','voice.api','modules.open'],60],
     ['extensions','模块中心','grid',extensions,['modules.open'],90],
-    ['settings','设置','settings',settings,['appearance.set','behavior.get','behavior.set'],100],
+    ['settings','设置','settings',settings,['chat.config.get','chat.config.set','chat.key.delete','appearance.set','behavior.get','behavior.set','mobile_updates.open','chat.memory.list','chat.books.months','chat.books.days','chat.books.day','chat.books.undated','chat.books.status','chat.layers.get','chat.layers.decide','chat.layers.correct','chat.layers.withdraw','chat.layers.settings','chat.cancel'],100],
   ];
-  return entries.map(([id,title,name,mount,commands,order,navigationGroup])=>registry.register({apiVersion:1,id,title,icon:name,mount,commands,order,navigationGroup,description:id==='voice'?'固定场景语音、文字朗读与声音专用 API；已连接桌面模块。':undefined}));
+  return entries.map(([id,title,name,mount,commands,order,navigationGroup])=>registry.register({apiVersion:1,id,title,icon:name,mount,commands,order,navigationGroup,description:id==='voice'?'文字转语音与声音专用 API；固定台词另属骨架。':undefined}));
 }
 root.HebaoUI={h,icon,button};root.HebaoModules={register};
 })(window);

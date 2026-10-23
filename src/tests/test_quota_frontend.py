@@ -6,8 +6,8 @@ import threading
 import time
 import unittest
 
-from hebao_quota.models import Balance, Snapshot
-from hebao_quota.service import QuotaService
+from usage_monitor.models import Balance, Snapshot
+from usage_monitor.service import QuotaService
 from quota_card import CardState, present
 
 

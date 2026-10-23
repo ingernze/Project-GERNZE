@@ -1,0 +1,4 @@
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}html.checker{background-color:#3b3343;background-image:linear-gradient(45deg,#4b4051 25%,transparent 25%),linear-gradient(-45deg,#4b4051 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#4b4051 75%),linear-gradient(-45deg,transparent 75%,#4b4051 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}#sample{width:100%;height:100%}canvas{display:block;width:100%;height:100%}.technical{display:none}#status{position:absolute;bottom:8px;left:12px;color:#e9dff2;font:13px system-ui}#status:empty{display:none}
+#status{display:none}
+
+:root{color-scheme:dark}

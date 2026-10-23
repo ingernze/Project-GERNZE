@@ -108,7 +108,7 @@ class StyleControlsMixin:
         window=getattr(self,'style_controls',None)
         if window is not None and window.winfo_exists():window.deiconify();window.lift();return window
         window=tk.Toplevel(self.root);self.style_controls=window
-        window.title('赫宝 · 人物风格试装');window.attributes('-topmost',True)
+        window.title('莉宝 · 人物风格试装');window.attributes('-topmost',True)
         panel=tk.Frame(window,padx=18,pady=16);panel.pack()
         tk.Label(panel,text='选择人物风格',font=('Microsoft YaHei UI',12)).pack(anchor='w')
         for style,name in STYLE_NAMES.items():

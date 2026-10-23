@@ -1,7 +1,7 @@
 """Approved recordings with searchable actual trigger descriptions."""
 import tkinter as tk
 from tkinter import ttk
-from hecate_ui import BG, PANEL, RAISED, INK, MUTED, ACCENT, ACCENT_INK, GOLD, QUIET, BORDER, FOCUS, GOOD, PREFIX, font, label, Button, header, configure_window
+from ui_theme import BG, PANEL, RAISED, INK, MUTED, ACCENT, ACCENT_INK, GOLD, QUIET, BORDER, FOCUS, GOOD, PREFIX, font, label, Button, header, configure_window
 
 
 def open_fixed_voice_window(pet):
@@ -16,7 +16,7 @@ def open_fixed_voice_window(pet):
         return window
     window = tk.Toplevel(pet.root)
     pet.voice_controls = window
-    configure_window(window, '赫宝 · 固定场景语音', 800, 690, (620, 600))
+    configure_window(window, '莉宝 · 固定场景语音', 800, 690, (620, 600))
     header(window, '固定场景语音', '选一句试听，也可以设置每个场景播放哪几句。')
     frame = tk.Frame(window, bg=BG)
     frame.pack(fill='both', expand=True, padx=22, pady=(0, 18))
@@ -77,7 +77,7 @@ def open_fixed_voice_window(pet):
         row = current()
         if row:
             okay = pet.voice_module.play_fixed(row['id'])
-            status.set('正在试听：'+row['text'] if okay else '当前无法播放：请显示赫宝、取消静音并调高音量。')
+            status.set('正在试听：'+row['text'] if okay else '当前无法播放：请显示莉宝、取消静音并调高音量。')
         return 'break'
 
     def stop():

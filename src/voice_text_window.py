@@ -2,16 +2,16 @@
 import time
 import tkinter as tk
 from tkinter import ttk
-from hecate_ui import BG,PANEL,INK,MUTED,ACCENT,BORDER,ERROR,GOOD,QUIET,label,Button,font,header,configure_window,PREFIX
+from ui_theme import BG,PANEL,INK,MUTED,ACCENT,BORDER,ERROR,GOOD,QUIET,label,Button,font,header,configure_window,PREFIX
 
 class VoiceTextWindow(tk.Toplevel):
     def __init__(self,pet):
         super().__init__(pet.root);self.pet=pet;self.module=pet.voice_module;self.closed=False
-        configure_window(self,'赫宝 · 声音',700,630,(580,540))
+        configure_window(self,'莉宝 · 声音',700,630,(580,540))
         self.protocol('WM_DELETE_WINDOW',self.close)
         self.bind('<Escape>',lambda _:self.close())
         self.bind('<Control-Return>',self._shortcut)
-        header(self,'让赫宝说一句','写下你想听的话，选择声音，然后播放。')
+        header(self,'让莉宝说一句','写下你想听的话，选择声音，然后播放。')
         body=tk.Frame(self,bg=BG);body.pack(fill='both',expand=True,padx=22,pady=(0,16));body.columnconfigure(0,weight=1);body.rowconfigure(2,weight=1)
         self._clock_job=None;self._started=None;self._last_api=False;self.reply_window=None
         self._choices=self.module.choices();selected=self.module.selection()
@@ -91,8 +91,8 @@ class VoiceTextWindow(tk.Toplevel):
         window=self.reply_window
         if window is None or not window.winfo_exists():
             window=self.reply_window=tk.Toplevel(self)
-            configure_window(window,'赫宝 · API 回复',570,360,(420,260))
-            header(window,'赫宝的回复')
+            configure_window(window,'莉宝 · API 回复',570,360,(420,260))
+            header(window,'莉宝的回复')
             body=tk.Frame(window,bg=PANEL);body.pack(fill='both',expand=True,padx=22,pady=(0,18))
             area=tk.Text(body,wrap='word',bg=PANEL,fg=INK,font=font(window,14),relief='flat',
                          padx=16,pady=12,selectbackground=ACCENT,selectforeground=BG)
@@ -129,7 +129,7 @@ class VoiceTextWindow(tk.Toplevel):
         for combo in self.combos.values():combo.configure(state='disabled' if busy else 'readonly')
         self.mute.configure(text='取消静音' if self.pet.muted else '静音')
         self.sound.set(f"声音大小：{self.pet.settings['voice_volume_percent']}%")
-        self.notice.set('当前静音：取消静音后再播放。' if self.pet.muted else '音量为0：请在固定场景录音中调高。' if self.pet.settings['voice_volume_percent']==0 else '会联网获取回复，再用当前声音播放。' if api_mode else '赫宝会照着你输入的文字说话。')
+        self.notice.set('当前静音：取消静音后再播放。' if self.pet.muted else '音量为0：请在固定场景录音中调高。' if self.pet.settings['voice_volume_percent']==0 else '会联网获取回复，再用当前声音播放。' if api_mode else '莉宝会照着你输入的文字说话。')
         if not preserve_error:
             value=self.module.status
             message=value['message']
@@ -156,5 +156,5 @@ def open_voice_text(pet):
         window=VoiceTextWindow(pet)
     except (OSError,ValueError,RuntimeError) as error:
         from tkinter import messagebox
-        messagebox.showerror('赫宝 · 声音',str(error),parent=pet.root);return
+        messagebox.showerror('莉宝 · 声音',str(error),parent=pet.root);return
     pet.voice_text_window=window;return window

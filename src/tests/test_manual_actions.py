@@ -9,9 +9,9 @@ from PIL import Image
 from manual_actions import load_manual_action
 
 ROOT=Path(__file__).resolve().parents[1]
-ASSETS=ROOT/'assets'/'pixel'/'hebao'/'actions'
-idle_manifest=json.loads((ROOT/'assets'/'pixel'/'hebao'/'idle'/'manifest.json').read_text(encoding='utf-8'))
-IDLE=Image.open(ROOT/'assets'/'pixel'/'hebao'/'idle'/idle_manifest['frames'][0]['file']).convert('RGBA')
+ASSETS=ROOT/'assets'/'pixel'/'libao'/'actions'
+idle_manifest=json.loads((ROOT/'assets'/'pixel'/'libao'/'idle'/'manifest.json').read_text(encoding='utf-8'))
+IDLE=Image.open(ROOT/'assets'/'pixel'/'libao'/'idle'/idle_manifest['frames'][0]['file']).convert('RGBA')
 
 class ManualAssetsTest(unittest.TestCase):
     def test_sleep_sequence_and_seams(self):

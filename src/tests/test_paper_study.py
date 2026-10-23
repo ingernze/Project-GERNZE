@@ -4,8 +4,15 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from workbench.bridge import Bridge
-from hebao_modules.sample import SAMPLE
+from workbench.bridge import Bridge as WorkbenchBridge
+from optional_modules import OptionalModules
+
+
+def Bridge(data_dir):
+    # These tests exercise study behavior, independent of installed packages.
+    return WorkbenchBridge(data_dir, modules=OptionalModules(Path(__file__).parent/'fixtures', data_dir))
+
+from libao_modules.sample import SAMPLE
 
 
 class PaperStudyTests(unittest.TestCase):
@@ -141,6 +148,42 @@ class PaperStudyTests(unittest.TestCase):
         for fragment in (r['summary'],r['user_report']['details'],r['weak_points'][0]['evidence'],r['review_focus'],r['activities'][0]['feedback']):self.assertIn(fragment,prompt)
         self.assertIn('user_self_report',prompt);self.assertIn('reference_supported_web_findings',prompt)
         self.assertIn('local_imported_answer_comparison',prompt)
+
+    def test_long_history_is_bounded_without_shortening_saved_reports(self):
+        for index in range(5):
+            r=self.report()
+            r['summary']='本次总结'+str(index)+'内容'*2000
+            r['user_report']['details']='用户原话'+str(index)+'内容'*2900
+            r['activities']=[dict(skill='reading',task='实际问题'*100,
+                response='原回答'*1500,feedback='实际解释'*350) for _ in range(2)]
+            r['weak_points']=[dict(point='困难'+str(n),evidence='实际依据'*240) for n in range(4)]
+            r['reference_findings']=[dict(conclusion='分析'*300,source='练习册'*100,evidence='参考内容'*450) for _ in range(2)]
+            r['review_focus']='旧建议'*300
+            self.save(r)
+        before=self.bridge.store.export_json()
+        context=self.daily._learning_context(self.bridge.study.history(limit=5))
+        self.assertLessEqual(len(json.dumps(context['recent_learning'],ensure_ascii=False)),7000)
+        self.assertEqual(5,len(context['recent_learning'])+context['omitted_recent_records'])
+        self.assertEqual(self.daily.workspace()['history'][0]['saved_at'],context['recent_learning'][0]['saved_at'])
+        self.assertEqual(before,self.bridge.store.export_json())
+        self.assertEqual(r['user_report']['details'],self.daily.workspace()['history'][0]['user_report']['details'])
+        self.assertNotEqual(r['review_focus'],context['suggested_attention'])
+
+    def test_large_objective_comparison_keeps_counts_and_source_not_all_answers(self):
+        sample=copy.deepcopy(SAMPLE)
+        sample['questions']=[{**sample['questions'][0],'id':str(index)} for index in range(10)]
+        lid=self.bridge.study.import_lesson(sample)
+        r=self.report(prompt=self.prompt(lid))
+        r['answers']={str(index):'B' for index in range(10)}
+        self.save(r)
+        context=self.daily._learning_context(self.bridge.study.history(limit=5))
+        comparison=context['recent_learning'][0]['local_imported_answer_comparison']
+        self.assertEqual(10,comparison['submitted_count'])
+        self.assertEqual(10,comparison['correct_count'])
+        self.assertEqual('submitted_questions_only',comparison['scope'])
+        self.assertNotIn('questions',comparison)
+        self.assertIn(sample['source'],comparison['source'])
+        self.assertEqual(10,len(self.daily.workspace()['history'][0]['local_evaluation']['questions']))
 
     def test_restart_resumes_new_prompt_exactly_and_old_accepted_report_once(self):
         p=self.prompt();new=Bridge(self.tmp.name).daily

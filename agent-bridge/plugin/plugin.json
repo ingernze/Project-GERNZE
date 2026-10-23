@@ -1,0 +1,8 @@
+{
+  "$schema":"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name":"gernze-codex",
+  "version":"1.0.0",
+  "description":"莉宝的可选本地人设与记忆接入，不额外调用模型。",
+  "author":{"name":"ingernze"},
+  "extensions":{"com.openai":{"hooks":"./hooks/hooks.json","interface":{"displayName":"莉宝 Codex 接入","shortDescription":"本地角色资料、授权记忆与可选手机任务提醒","developerName":"ingernze","category":"Productivity","capabilities":["Read","Write"]}}}
+}

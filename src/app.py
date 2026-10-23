@@ -18,7 +18,7 @@ from reading_action import load_reading_action
 from manual_actions import ManualActionTrial
 from action_controls import ActionControls
 from autonomous_actions import AutonomousActions
-from hebao_inertia import Bounds, CoastController
+from character_inertia import Bounds, CoastController
 from grab_sway import GrabSway
 from tray_popup import TrayPopup
 from style_resources import style_paths, decode_atlas, make_photo
@@ -43,11 +43,11 @@ STATE_ROOT = (
     )
 )
 OUTPUT = STATE_ROOT / 'output'
-ASSET_DIR = ROOT / 'assets' / 'pixel' / 'hebao' / 'idle'
+ASSET_DIR = ROOT / 'assets' / 'pixel' / 'libao' / 'idle'
 MANIFEST = ASSET_DIR / 'manifest.json'
-READING_DIR = ROOT / 'assets' / 'pixel' / 'hebao' / 'reading'
+READING_DIR = ROOT / 'assets' / 'pixel' / 'libao' / 'reading'
 READING_MANIFEST = READING_DIR / 'manifest.json'
-ICON_PATH = ROOT / 'assets' / 'icons' / 'hebao.ico'
+ICON_PATH = ROOT / 'assets' / 'icons' / 'libao.ico'
 SETTINGS = STATE_ROOT / 'settings.json'
 LOG = OUTPUT / 'app_events.jsonl'
 KEY = '#ff00ff'
@@ -156,7 +156,7 @@ class HecatePet(StyleControlsMixin):
         self.closing=False
         self.ui_thread=threading.get_ident()
         self.root=tk.Tk()
-        self.root.title('赫宝桌宠')
+        self.root.title('莉宝桌宠')
         self.root.report_callback_exception=lambda kind,error,tb:log('callback_error',error=str(error),trace=''.join(traceback.format_exception(kind,error,tb)))
         self.root.overrideredirect(True)
         self.root.configure(bg=KEY)
@@ -656,7 +656,7 @@ class HecatePet(StyleControlsMixin):
         self._notify_commands()
 
     def activity_settings_call(self,command,params):
-        if self.closing:raise OSError('赫宝正在退出，设置未保存。')
+        if self.closing:raise OSError('莉宝正在退出，设置未保存。')
         if command=='behavior.set':validate_preferences(params['settings'])
         request=DesktopSettingsRequest(command,params)
         if threading.get_ident()==self.ui_thread:request.execute(self)
@@ -724,7 +724,11 @@ class HecatePet(StyleControlsMixin):
                     from voice_api_window import open_voice_api
                     open_voice_api(self)
             elif command=='voice:workbench_open':self.voice.emit('workbench')
-            elif command=='voice:workbench_stop':self.voice.stop('workbench')
+            elif command=='voice:workbench_stop':
+                self.voice.stop('workbench');self.voice.stop('workbench_scene')
+            elif command=='voice:scene_sleep':self.voice.emit('sleep',owner='workbench_scene')
+            elif command=='voice:scene_wake':self.voice.emit('wake',owner='workbench_scene')
+            elif command=='voice:scene_stop':self.voice.stop('workbench_scene')
             elif command=='reading:play':self.start_reading()
             elif command=='reading:finish':self._finish_reading()
             elif command=='style:open':self.open_style_controls()
@@ -768,7 +772,7 @@ class HecatePet(StyleControlsMixin):
         return open_voice_modules(self)
 
     def save_voice_bindings(self,bindings):
-        if self.closing:raise ValueError('赫宝正在退出')
+        if self.closing:raise ValueError('莉宝正在退出')
         validated=self.voice.validate_bindings(bindings)
         updated={**self.settings,'scene_voice_bindings':validated}
         save_settings(updated)  # Persist first; failed writes leave runtime untouched.
@@ -779,9 +783,7 @@ class HecatePet(StyleControlsMixin):
         log('scene_voice_bindings_saved',custom_events=list(validated))
 
     def open_voice_controls(self):
-        if not self.optional_modules.installed('fixed_voice'):
-            from module_packages_window import open_packages
-            return open_packages(self)
+        # Fixed recordings are a core feature, independent of voice_engine.
         if not self.closing:return open_voice_controls(self)
 
     def record_manual_event(self,event,**data):
@@ -837,7 +839,7 @@ class HecatePet(StyleControlsMixin):
         package_window=getattr(self,'packages_window',None)
         if package_window is not None and package_window.busy:
             from tkinter import messagebox
-            messagebox.showinfo('正在整理模块','请等当前安装或移除完成，再退出赫宝。',parent=package_window)
+            messagebox.showinfo('正在整理模块','请等当前安装或移除完成，再退出莉宝。',parent=package_window)
             return
         if self.closing:return
         self.closing=True

@@ -26,7 +26,7 @@ namespace QuietCodex {
         bool closing;
 
         public ActivityWindow(string initialRoot) {
-            Text = "赫宝 · Codex 活动观察（只读元数据）";
+            Text = "莉宝 · Codex 活动观察（只读元数据）";
             ClientSize = new Size(800, 530); MinimumSize = new Size(640, 440);
             Font = new Font("Microsoft YaHei UI", 10F);
             BackColor = background; ForeColor = ink;

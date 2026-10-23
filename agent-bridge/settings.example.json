@@ -1,0 +1,7 @@
+{
+  "state_db": "../local-notes/agent-memory.sqlite3",
+  "persona": "../src/workbench/companion_persona.example.md",
+  "foundation": "empty-core.example.json",
+  "desktop_journal": null,
+  "approved_snapshot": null
+}

@@ -1,0 +1,3 @@
+# qrcode is bundled locally; existing cryptography runtime was independently checked.
+cryptography==48.0.0
+qrcode==8.2

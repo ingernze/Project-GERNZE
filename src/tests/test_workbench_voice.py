@@ -19,9 +19,9 @@ class VoiceEntryChecks(unittest.TestCase):
         events=[];s=self.run_server(events.append)
         self.assertEqual(self.call(s,'voice.available'),(200,{'result':{'available':True}}))
         self.assertEqual(events,[])
-        for event in ('open','fixed','text','api'):
+        for event in ('open','fixed','text','api','scene_sleep','scene_wake','scene_stop'):
             self.assertEqual(self.call(s,'voice.'+event),(200,{'result':{'queued':True}}))
-        self.assertEqual(events,['open','fixed','text','api'])
+        self.assertEqual(events,['open','fixed','text','api','scene_sleep','scene_wake','scene_stop'])
     def test_standalone_reports_unavailable_and_rejects_open(self):
         s=self.run_server(None)
         self.assertFalse(self.call(s,'voice.available')[1]['result']['available'])

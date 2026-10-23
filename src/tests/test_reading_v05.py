@@ -8,11 +8,11 @@ from PIL import Image
 from reading_action import load_reading_action
 
 PROJECT=Path(__file__).resolve().parent.parent
-ROOT=PROJECT/'assets/pixel/hebao/reading'
+ROOT=PROJECT/'assets/pixel/libao/reading'
 
 class ReadingManifestChecks(unittest.TestCase):
     def setUp(self):
-        self.idle=Image.open(PROJECT/'assets/pixel/hebao/idle/frame_00.png').convert('RGBA')
+        self.idle=Image.open(PROJECT/'assets/pixel/libao/idle/frame_00.png').convert('RGBA')
     def test_loading_phase_contract(self):
         resource,frames,wait,duration=load_reading_action(ROOT,self.idle)
         self.assertEqual(len(frames),11)

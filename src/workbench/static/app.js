@@ -68,8 +68,8 @@ function renderSidebar() {
   sidebarScope?.dispose();sidebarScope=new window.HebaoRuntime.Scope();
   const listen=(target,handler)=>sidebarScope.listen(target,'click',handler);
   const side=h('div','navigation');const logo=h('div','brand-row');
-  const brand=h('div','brand');const mark=h('img','brand-mark');mark.src='mark.svg';mark.alt='';
-  brand.append(mark,h('span','brand-name','赫宝'));logo.append(brand);
+  const brand=h('div','brand');const brandPet=h('button','desktop-brand-pet');brandPet.type='button';brandPet.setAttribute('aria-label','轻碰小莉宝');const mark=h('img','brand-mark');mark.src=window.GernzeJellyArtwork?.brand||'assets/jelly/libao-desktop.png';mark.alt='';brandPet.append(mark);window.GernzeSceneJelly?.bindBrand(brandPet,sidebarScope);
+  brand.append(brandPet,h('span','brand-name','莉宝'));logo.append(brand);
   const toggle=h('button','nav-icon-button nav-toggle');toggle.title='收起侧栏';toggle.setAttribute('aria-label','收起侧栏');toggle.setAttribute('aria-controls','workbench-navigation');toggle.append(icon('rail',18));listen(toggle,()=>frame.toggleSidebar());logo.append(toggle);side.append(logo);
   side.id='workbench-navigation';
   const start=h('button','new-study');start.append(icon('plus',17),h('span','new-study-label','新的学习'));start.title='新的学习';listen(start,()=>navigate('study'));side.append(start);
@@ -105,7 +105,7 @@ function renderSidebar() {
   recent=h('div','recent-area');recentArea=recent;side.append(recent);renderRecent();
   const foot=h('div','nav-footer');const settingsEntry=registry.modules.get('settings');
   if(settingsEntry)addEntry(settingsEntry,foot);
-  const identity=h('div','sidebar-foot');const avatar=h('div','avatar');avatar.append(icon('clock',17));const text=h('div','foot-label','赫宝在这里');text.append(h('div','foot-caption','慢慢来，也没关系'));identity.append(avatar,text);foot.append(identity);side.append(foot);frame.left.replaceChildren(side);
+  const identity=h('div','sidebar-foot');const avatar=h('div','avatar');avatar.append(icon('clock',17));const text=h('div','foot-label','莉宝在这里');text.append(h('div','foot-caption','慢慢来，也没关系'));identity.append(avatar,text);foot.append(identity);side.append(foot);frame.left.replaceChildren(side);
   frame.onLayout=collapsed=>{
     side.classList.toggle('is-compact',collapsed);
     toggle.setAttribute('aria-expanded',String(!collapsed));
@@ -130,7 +130,7 @@ function navigate(id,payload) {
   if(disposed)return;
   const entry=registry.modules.get(id);if(!entry)return;
   activeId=id;if(entry.navigationGroup==='learning'){learningExpanded=true;updateLearning();}
-  crumb.textContent='工作台 / '+(entry.navigationGroup==='learning'?'学习 / ':'')+entry.title;document.title=entry.title+' · 赫宝';
+  crumb.textContent='工作台 / '+(entry.navigationGroup==='learning'?'学习 / ':'')+entry.title;document.title=entry.title+' · 莉宝';
   updateSelection();
   host.open(id,payload);
 }

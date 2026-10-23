@@ -6,7 +6,7 @@ from decimal import Decimal
 import time
 import tkinter as tk
 
-from hebao_quota.models import Balance, Snapshot
+from usage_monitor.models import Balance, Snapshot
 from quota_card import CardState, QuotaCard
 
 

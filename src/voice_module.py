@@ -11,7 +11,7 @@ def locate_home(root):
     override=os.environ.get('HECATE_VOICE_MODULE_DIR')
     if override:return Path(override).resolve()
     for parent in (Path(root).resolve(),*Path(root).resolve().parents):
-        home=parent/'Hecate_Voice_Module'
+        home=parent/'voice_engine'
         if (home/'catalog.json').is_file():return home
         migrated=parent/'启动版'/'可选模块'/'voice_engine'
         if (migrated/'catalog.json').is_file():return migrated
@@ -103,7 +103,7 @@ class VoiceModuleController:
     def _available(self,play):
         if self._closed or self.pet.closing:raise RuntimeError('语音模块已关闭')
         if self.busy:raise RuntimeError('上一条语音正在处理或取消，请稍后再试')
-        if play and (not self.pet.voice.enabled() or self.pet.voice.volume()==0):raise RuntimeError('请先显示赫宝、取消静音并调高音量')
+        if play and (not self.pet.voice.enabled() or self.pet.voice.volume()==0):raise RuntimeError('请先显示莉宝、取消静音并调高音量')
     def speak_text(self,text,*,play=True):
         self._assert_ui()
         if not isinstance(text,str) or not text.strip() or len(text)>500:raise ValueError('请输入 1 至 500 字的文本')

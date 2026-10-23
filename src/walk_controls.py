@@ -9,7 +9,7 @@ class WalkControls(tk.Toplevel):
     def __init__(self, pet):
         super().__init__(pet.root)
         self.pet = pet
-        self.title('赫宝 · 四向八帧试走')
+        self.title('莉宝 · 四向八帧试走')
         self.configure(bg='#111c30')
         self.resizable(False, False)
         self.attributes('-topmost', True)
@@ -68,7 +68,7 @@ class WalkControls(tk.Toplevel):
             self.status.set('本次未开始，已返回可用待机。')
 
     def unavailable(self):
-        self.status.set('这一方向的资源暂不可用，赫宝已返回待机。')
+        self.status.set('这一方向的资源暂不可用，莉宝已返回待机。')
 
     def stop(self):
         self.pet.walk_trial.stop()

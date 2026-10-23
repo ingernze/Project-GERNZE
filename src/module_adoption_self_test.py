@@ -16,7 +16,7 @@ def schedule(pet):
         try:
             modules = pet.optional_modules
             check('frozen_managed_host', getattr(sys, 'frozen', False) and modules.managed)
-            check('three_modules_adopted', all(modules.installed(key) for key in ('cet6','fixed_voice','voice_engine')))
+            check('optional_modules_adopted', all(modules.installed(key) for key in ('cet6','voice_engine')))
             check('fixed_21_clips', len(pet.voice.clips) == 21)
             choices = pet.voice_module.choices()
             check('chronological_two_gpt_choices', [x['label'] for x in choices['gpt_options']][:2] == ['第一套','第二套'])
@@ -30,11 +30,11 @@ def schedule(pet):
             check('no_torch_in_desktop_host', 'torch' not in sys.modules and pet.voice_module._backend is None)
             server = pet.workbench.open(launch_browser=False)
             result = server.bridge.call({'command': 'state.summary', 'params': {}})
-            check('workbench_three_installed', all(result['optional_modules'].values()))
+            check('workbench_optional_installed', all(result['optional_modules'].values()))
             check('learning_backend_loaded', server.bridge.call({'command':'daily.workspace','params':{}}) is not None)
             check('workbench_singleton', pet.workbench.open(launch_browser=False) is server)
             app.OUTPUT.mkdir(parents=True, exist_ok=True)
-            for filename, factory in [('模块管理_三项已安装.png', lambda: open_packages(pet)), ('文字转语音_已接入.png', lambda: open_voice_text(pet))]:
+            for filename, factory in [('模块管理_可选功能已安装.png', lambda: open_packages(pet)), ('文字转语音_已接入.png', lambda: open_voice_text(pet))]:
                 window = factory()
                 window.lift();window.update()
                 x,y = window.winfo_rootx(), window.winfo_rooty()

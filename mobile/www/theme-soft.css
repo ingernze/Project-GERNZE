@@ -1,0 +1,91 @@
+/* Shared v6 surface treatment. Layout, assets, navigation and data stay intact. */
+:root{--app-ivory:#f6f1e7;--app-paper:#eee9df;--app-brass:#b6a17c;--app-ink:#3d5268;--app-muted:#737f86}
+html,body{background:#1e2e41}
+.shell[data-current-page]{background-color:#27394e}
+.shell[data-current-page][data-top-style]{
+  background-image:linear-gradient(180deg,#192b4010,#24364d12 55%,#1b2d438a),var(--dl-art-scene)!important;
+  background-position:center;background-size:cover;
+}
+.shell[data-current-page]::before{display:none}
+.shell[data-current-page] .top{background:linear-gradient(180deg,#182b40a6,#182b4000)!important}
+.shell[data-current-page] .top .brand strong{color:#faf3e5;text-shadow:0 2px 8px #14233788}
+.shell[data-current-page] .top .brand small{color:#e0d9ca}
+.shell[data-current-page] .brand-mark{border-color:#cfc0a1;background:linear-gradient(140deg,#e6e6de38,#30465f80);box-shadow:0 0 0 3px #e2d7bc0d,inset 0 0 0 2px #e2d3b31a}
+.shell[data-current-page] .top .message{color:#486078;border-color:#cbb68d;background:linear-gradient(145deg,#f8f3e9f5,#dddcd3f0);box-shadow:0 2px 0 #675a4333,0 4px 10px #15273e21}
+.shell[data-current-page] .top .round{color:#f4ead6;border-color:#cbb99699;background:#294159a8;box-shadow:inset 0 0 0 3px #e4d0a80d}
+/* One quiet navigation rail, retaining the approved Q-character tabs. */
+.shell[data-current-page] .bottom{background:none;border:0;box-shadow:none}
+.shell[data-current-page] .bottom::before{top:24px;left:9px;right:9px;bottom:9px;background:linear-gradient(120deg,#314a61e0,#253c54eb);border:1px solid #c9b88f79;border-radius:17px;box-shadow:0 5px 16px #10213929,inset 0 1px 0 #fff2d512}
+.shell[data-current-page] .bottom::after{display:none}
+.shell[data-current-page] .bottom .q-tab,.shell[data-current-page] .bottom .q-tab[aria-current=page]{border:0;background:none;box-shadow:none}
+.shell[data-current-page] .bottom .q-tab::before{background:transparent;border-color:transparent;box-shadow:none;border-radius:10px}
+.shell[data-current-page] .bottom .q-tab[aria-current=page]::before{background:#eee8d8;border:1px solid #d1bd95;box-shadow:0 2px 4px #10243a1a}
+.shell[data-current-page] .bottom .tab-label{color:#e0e1db}
+.shell[data-current-page] .bottom .q-tab[aria-current=page] .tab-label{color:#455b71}
+.shell[data-current-page] .bottom .q-tab[aria-current=page]::after{background:#a38e65}
+/* The same desk sits in front of the existing full-body companion. */
+.shell[data-current-page=home] .home::after{content:'';position:absolute;inset:0;z-index:4;pointer-events:none;
+  background-image:linear-gradient(180deg,#192b4010,#24364d12 55%,#1b2d438a),var(--dl-art-scene);
+  background-size:cover;background-position:center;clip-path:inset(70% 0 0)}
+.shell .plan-widget .status{border:1px solid #d3c4a5ad;background:#f4f0e5ee;color:#465d73;box-shadow:0 3px 10px #12233a1c;border-radius:20px}
+.shell .status .mini{color:#6a7d8c;background:#e6e6df}
+.shell .plan-widget .plan-count{color:#7c837f;border-color:#bcb69f6b}
+.shell .speech{background:linear-gradient(135deg,#faf6edfa,#eee8dbf2);border:1px solid #cdb88f;border-radius:13px;box-shadow:0 5px 18px #17283b29,inset 0 0 0 3px #fff9ed30;color:#43586c}
+.shell .speech::after{inset:6px;border:1px solid #c2ad8338;border-radius:8px}
+.shell .speech::before,.shell .speech-decoration{display:none}
+.shell .speaker{color:#fff8e9;background:linear-gradient(135deg,#62788e,#465f78);border-color:#d0c09c;border-radius:5px;box-shadow:0 2px 5px #20374e21;letter-spacing:.1em}
+.shell .speaker::before{color:#e6d4aa}
+.shell .speech .next-mark{color:#88754f}
+/* Secondary pages are clean paper surfaces; scenery stays around their edges. */
+.shell[data-current-page]:not([data-current-page=home]) .content:not(#dialogue){
+  --ink:var(--app-ink);--muted:var(--app-muted);--line:#b8aa8a52;--panel:#fffaf348;--accent:#6e8496;
+  height:auto;min-height:0;margin:4px 14px 10px;padding:22px 20px 26px;
+  border:1px solid #c9b791a1;border-radius:15px;background:linear-gradient(150deg,#faf6edf7,#eee9dff7);
+  color:var(--app-ink);box-shadow:0 5px 18px #15284021;scrollbar-color:#baa98977 transparent;
+}
+.shell .content:not(#dialogue) .section-heading{padding:0 0 20px;margin:0 0 20px;border-bottom:1px solid #b4a28147}
+.shell .content:not(#dialogue) .section-heading .eyebrow{color:#92815f;font-size:10px;letter-spacing:.1em}
+.shell .content:not(#dialogue) .section-heading h2{font-family:"Songti SC","Noto Serif CJK SC","SimSun",serif;color:#3c5268;font-size:25px;letter-spacing:.08em;margin:7px 0 9px;font-weight:600}
+.shell .content:not(#dialogue) .section-heading p{font-size:12px;line-height:1.85;margin:0;color:#748087}
+.shell .content:not(#dialogue) h3{color:#4a5d6e;font-size:14px;letter-spacing:.035em;font-weight:550}
+.shell .content:not(#dialogue) .muted,.shell .content:not(#dialogue) .hint,.shell .content:not(#dialogue) .empty{color:#748087}
+.shell .content:not(#dialogue) .hint{font-size:11px;line-height:1.85;margin-bottom:0}
+.shell .content:not(#dialogue) .panel{padding:0 0 21px;border:0;border-bottom:1px solid #b4a2813d;border-radius:0;background:none;box-shadow:none;margin:0 0 20px}
+.shell .content:not(#dialogue) .panel label{color:#566a7b;font-size:12px;margin:18px 0 8px;line-height:1.6}
+.shell .content:not(#dialogue) .panel label:first-child{margin-top:0}
+.shell .content:not(#dialogue) input,.shell .content:not(#dialogue) textarea,.shell .content:not(#dialogue) select{
+  color:#3b5268;background:#fffdf8cc;border:1px solid #b8b0a071;border-radius:8px;
+  min-height:46px;padding:11px 12px;box-shadow:none;font-size:14px;line-height:1.6;color-scheme:light;
+}
+.shell .content:not(#dialogue) input::placeholder,.shell .content:not(#dialogue) textarea::placeholder{color:#929895}
+.shell .content:not(#dialogue) input[type=datetime-local]{width:100%;max-width:100%;min-width:0;font-size:13px}
+.shell .content:not(#dialogue) input:focus-visible,.shell .content:not(#dialogue) textarea:focus-visible,.shell .content:not(#dialogue) select:focus-visible{outline:2px solid #7790a33d;outline-offset:2px;border-color:#869aaa}
+.shell .content:not(#dialogue) button{color:#51687c;background:#e8e7de;border:1px solid #b8ad9363;border-radius:8px;min-height:44px;box-shadow:none;font-size:12px}
+.shell .content:not(#dialogue) button.primary{color:#fff8eb;background:linear-gradient(140deg,#657d92,#48637b);border:1px solid #5b7286;border-radius:8px;padding:11px 16px;box-shadow:0 2px 3px #38536b12}
+.shell .content:not(#dialogue) button:disabled{opacity:.5;cursor:default}
+.shell .content:not(#dialogue) .link-row{border:0;border-radius:0;border-bottom:1px solid #b4a2813d;background:none;color:#65788a;padding:12px 1px}
+.shell .content:not(#dialogue) .list-heading{margin-top:22px;align-items:center}
+.shell .content:not(#dialogue) .list-heading h3{margin:0}
+.shell .content:not(#dialogue) .list-heading>span{font-size:11px;color:#8b8c80}
+.shell .content:not(#dialogue) .reminder-list li{gap:7px;padding:16px 0;flex-wrap:wrap;border-color:#b4a2813d}
+.shell .content:not(#dialogue) .reminder-list .text{flex:1 0 100%;padding-bottom:2px}
+.shell .content:not(#dialogue) .reminder-list strong{color:#435a70;line-height:1.7}
+.shell .content:not(#dialogue) .reminder-list small{color:#808984;font-size:10px;line-height:1.8}
+.shell .content:not(#dialogue) .reminder-list button{font-size:11px;min-width:52px;min-height:44px;padding:6px 12px}
+.shell .content:not(#dialogue) .reminder-list .empty{font-size:12px;line-height:1.9}
+.shell .content:not(#dialogue) .activity-empty{border:0;border-radius:0;background:none;box-shadow:none;padding:30px 0 24px;color:#6a7d88}
+.shell .content:not(#dialogue) .activity-empty .quiet{color:#8b918a;font-size:11px}
+.shell .content:not(#dialogue) .activity-list li{border:0;border-bottom:1px solid #b4a2813d;border-radius:0;padding:14px 0;margin:0;background:none}
+.shell .content:not(#dialogue) .activity-list p{color:#687d8a;line-height:1.8}
+.shell .content:not(#dialogue) .technical{padding-top:3px}
+.shell .content:not(#dialogue) .technical summary{color:#78867f;font-size:12px;min-height:44px;display:flex;align-items:center;gap:8px}
+.shell .content:not(#dialogue) .technical summary::before{content:'›';color:#a18a5f;font-size:18px;transition:transform 150ms}
+.shell .content:not(#dialogue) .technical[open] summary::before{transform:rotate(90deg)}
+.shell .content:not(#dialogue) .technical pre{color:#73818a;font-size:10px;line-height:1.8;background:#ede9de;padding:12px;border-radius:7px}
+.shell .content:not(#dialogue) .portrait-tools{gap:8px;margin-bottom:22px}
+.shell .content:not(#dialogue) .portrait-tools button{min-height:44px;padding:8px 12px;font-size:11px}
+.shell dialog{color:#435a6d;background:#f5f0e7;border:1px solid #b9a47c;border-radius:13px;box-shadow:0 15px 50px #1423374d}
+.shell dialog::backdrop{background:#17283d99;backdrop-filter:blur(3px)}
+.toast{color:#42586b;background:#f5efe2;border:1px solid #c7b18a;border-radius:10px;box-shadow:0 6px 25px #172a4029}
+@media(max-width:350px){.shell[data-current-page]:not([data-current-page=home]) .content:not(#dialogue){margin-inline:10px;padding-inline:15px}}
+@media(prefers-reduced-motion:reduce){.shell .content:not(#dialogue) .technical summary::before{transition:none}}

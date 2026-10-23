@@ -35,7 +35,7 @@ class WorkbenchHost:
 
     def open(self, *, launch_browser=True):
         if self.closed:
-            raise RuntimeError('工作台已随赫宝退出')
+            raise RuntimeError('工作台已随莉宝退出')
         if self.server and self.server.closing and self.window:
             self.window.close()
         if self.worker and self.worker.is_alive() and self.server.closing:

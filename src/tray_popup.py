@@ -6,7 +6,7 @@ try:
     import win32api
 except ImportError:
     win32api = None
-from hecate_ui import portrait, clamp_popup, absolute_position
+from ui_theme import portrait, clamp_popup, absolute_position
 
 
 class TrayPopup(tk.Toplevel):
@@ -83,12 +83,12 @@ class TrayPopup(tk.Toplevel):
         self.c.delete('all');self.items=[]
         self.rect((0,0,288,90),'#1e2841')
         self.c.create_image(22*self.s,17*self.s,image=self._photo,anchor='nw')
-        self.text(80,34,'赫宝',19);self.text(80,58,'桌面上的小魔女',11,'#aaa8bf')
+        self.text(80,34,'莉宝',19);self.text(80,58,'桌面上的小魔女',11,'#aaa8bf')
         self.text(268,61,'✦',17,'#d8c29a','e')
         self.rect((0,89,288,90),'#45465e')
         self.text(21,107,'• 已显示' if self.pet.visible else '• 已隐藏',10,'#aaa8bf')
         self.text(267,107,f'{self.pet.scale}× · '+('正在读书' if self.pet.reading_index is not None else '陪在这里'),10,'#aaa8bf','e')
-        self.row(119,'eye','隐藏赫宝' if self.pet.visible else '显示赫宝','hide' if self.pet.visible else 'show')
+        self.row(119,'eye','隐藏莉宝' if self.pet.visible else '显示莉宝','hide' if self.pet.visible else 'show')
         self.row(156,'sound','取消静音' if self.pet.muted else '静音','mute','开' if self.pet.muted else '关')
         self.text(22,212,'人物大小',11,'#aaa8bf')
         for n in (1,2,3):
@@ -110,8 +110,8 @@ class TrayPopup(tk.Toplevel):
         self.row(551,'star','开发者：Codex 活动观察','codex-activity:open')
         self.row(588,'sound','开发者：声音模块','voice_modules:open')
         self.rect((0,633,288,634),'#45465e')
-        self.row(644,'exit','退出赫宝','exit')
-        self.text(22,691,'HECATE',9,'#86879e');self.text(267,691,'Esc 收起 · ↑↓ 选择',9,'#86879e','e')
+        self.row(644,'exit','退出莉宝','exit')
+        self.text(22,691,'GERNZE',9,'#86879e');self.text(267,691,'Esc 收起 · ↑↓ 选择',9,'#86879e','e')
 
     def row(self,y,icon,label,command,tail=''):
         idx=len(self.items);box=(13,y,275,y+35)

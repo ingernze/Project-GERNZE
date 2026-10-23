@@ -1,0 +1,6 @@
+PixiJS 6.5.10 and @pixi/unsafe-eval 6.5.10
+Source: https://github.com/pixijs/pixijs/tree/v6.5.10
+License: MIT (retain bundled copyright notices)
+Compatibility component: https://cdn.jsdelivr.net/npm/@pixi/unsafe-eval@6.5.10/dist/browser/unsafe-eval.min.js
+Official usage: https://api.pixijs.io/@pixi/unsafe-eval.html
+No CDN requests are made when running the scene.

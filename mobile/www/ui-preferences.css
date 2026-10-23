@@ -1,0 +1,39 @@
+:root{--app-scene:url("scene/window-dusk.png")}
+:root[data-background=study]{--app-scene:url("scene/study-soft-classic.png")}
+.shell,.hebao-dialogue{--dl-art-scene:var(--app-scene)!important}
+:root[data-background=window] .shell .home::after{display:none}
+.shell .bottom .q-tab{transform-origin:50% 80%}
+.shell #backgroundStatus{min-height:1.8em}
+
+/* Settings overview: native disclosures keep focus and form state intact. */
+.shell #settings.page .settings-group{margin:0 0 11px;border:1px solid #c6b68b40;border-radius:15px;background:linear-gradient(125deg,#344e63e8,#263d53ed);box-shadow:inset 0 1px 0 #ffffff0b;overflow:clip}
+.shell #settings.page .settings-group>summary{position:relative;display:flex;flex-direction:column;gap:5px;list-style:none;padding:17px 45px 17px 18px;min-height:76px;cursor:pointer;color:#f0e9d9;box-sizing:border-box}
+.shell #settings.page .settings-group>summary::-webkit-details-marker{display:none}
+.shell #settings.page .settings-group>summary>span{font-size:16px;letter-spacing:.05em}
+.shell #settings.page .settings-group>summary>small{font-size:11px;line-height:1.6;color:#b6c1c9}
+.shell #settings.page .settings-group>summary::after{content:'›';position:absolute;right:19px;top:25px;font-size:24px;line-height:1;color:#cfbd96;transform-origin:center;transition:transform .15s}
+.shell #settings.page .settings-group[open]>summary{border-bottom:1px solid #d8c9a322;background:#ffffff05}
+.shell #settings.page .settings-group[open]>summary::after{transform:rotate(90deg)}
+.shell #settings.page .settings-group>summary:focus-visible{outline:2px solid #d4c19c;outline-offset:-4px;border-radius:13px}
+.shell #settings.page .settings-group-body{padding:4px 16px 15px}
+.shell #settings.page .settings-group-body>.panel{margin:0;padding:15px 0;border:0;border-radius:0;background:none;box-shadow:none;color:#dce4e9}
+.shell #settings.page .settings-group-body>.panel+ .panel{border-top:1px solid #d5c49e26}
+.shell #settings.page .settings-group-body>.panel>h3{display:none}
+.shell #settings.page .settings-group-body label{font-size:13px;color:#d0dbe2}
+.shell #settings.page .settings-group-body .hint{font-size:11px;line-height:1.8;color:#aebfc9}
+.shell #settings.page .settings-group-body input:not([type=checkbox]),.shell #settings.page .settings-group-body select,.shell #settings.page .settings-group-body textarea{border:1px solid #9baeb13b;border-radius:10px;background:#172a3dcc;color:#edf1f3;font-size:14px}
+.shell #settings.page .settings-group-body button{border-radius:10px;min-height:44px;font-size:13px}
+.shell #settings.page .settings-group-body .primary{background:linear-gradient(125deg,#e1d6bd,#cabb9e);color:#2d4051;border-color:#e1d0a9}
+.shell #settings.page .settings-group-body details{margin-top:12px;padding:9px 0;border-top:1px solid #c6b68b30}
+.shell #settings.page .settings-group-body details>summary{cursor:pointer;min-height:35px;line-height:1.7;font-size:13px;color:#e3ddcf}
+.shell #settings.page .portrait-tools{position:static;padding:12px 0 0;display:flex;flex-wrap:wrap;gap:8px}
+.shell #settings.page>.technical{margin:17px 0 0;padding:12px 2px;border-top:1px solid #bdc8ce30;background:none;box-shadow:none;border-radius:0}
+.shell #settings.page>.technical>summary{font-size:12px;color:#aab9c3;min-height:36px;cursor:pointer}
+@media(prefers-reduced-motion:reduce){.shell #settings.page .settings-group>summary::after{transition:none}}
+
+.shell #settings.page .settings-group-body h3{color:#e3ddcf}
+
+/* The tap animation owns movement; no separate press/release bounce. */
+.shell .bottom .q-tab .nav-avatar{transition:none}
+.shell .bottom .q-tab:active .nav-avatar{transform:translateX(-50%) translateY(2px) scale(.90)}
+.shell .bottom .q-tab[aria-current=page]:active .nav-avatar{transform:translateX(-50%) translateY(-5px) scale(1.06)}

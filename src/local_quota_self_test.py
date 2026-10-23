@@ -5,7 +5,7 @@ import sys
 import traceback
 from unittest.mock import patch
 from PIL import ImageGrab
-from hebao_quota.local_snapshot import LocalHistory, HistoricalWindow
+from usage_monitor.local_snapshot import LocalHistory, HistoricalWindow
 
 def schedule(pet):
     import app
@@ -35,7 +35,7 @@ def schedule(pet):
         import win32api
         from decimal import Decimal
         from quota_card import CardState
-        from hebao_quota.models import Balance, Snapshot
+        from usage_monitor.models import Balance, Snapshot
         from tray_popup import TrayPopup
         app.OUTPUT.mkdir(parents=True,exist_ok=True)
         before={k:str(v) for k,v in ttk.Style(pet.root).configure('TButton').items()}

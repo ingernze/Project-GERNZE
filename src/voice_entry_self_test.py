@@ -35,7 +35,7 @@ def schedule(pet):
         if not w or not w.ready.is_set():pet.root.after(100,guarded(wait_window));return
         check('round_'+str(cycle[0]+1)+'_native_window_exists',not w.error and bool(w.hwnd) and win32gui.IsWindow(w.hwnd))
         # Title is set after actual authenticated frontend bootstrap and navigation.
-        if win32gui.GetWindowText(w.hwnd)!='六级学习 · 赫宝':pet.root.after(100,guarded(wait_window));return
+        if win32gui.GetWindowText(w.hwnd)!='六级学习 · 莉宝':pet.root.after(100,guarded(wait_window));return
         check('round_'+str(cycle[0]+1)+'_frontend_loaded',True)
         check('desktop_voice_available',call(s,'voice.available')['available'])
         check('learning_api_connected','progress' in call(s,'state.summary'))
@@ -47,7 +47,7 @@ def schedule(pet):
         before=w.launch_count;hwnd=w.hwnd
         pet.workbench.open();pet.workbench.open()
         check('rapid_reopen_reuses_existing_window',w.hwnd==hwnd and w.launch_count==before)
-        rounds.append({'round':cycle[0]+1,'page':'六级学习 · 赫宝','http_connected':True,'single_window':True})
+        rounds.append({'round':cycle[0]+1,'page':'六级学习 · 莉宝','http_connected':True,'single_window':True})
         if cycle[0]==0:
             call(s,'voice.fixed');pet.root.after(250,guarded(check_fixed))
         else:close_round()

@@ -33,12 +33,13 @@ def main():
         catalog['modules'][identity] = {'version': args.version, 'files': entries, 'bytes': total}
         summary[identity] = {'files': len(entries), 'uncompressed_bytes': total, 'zip_bytes': archive.stat().st_size, 'sha256': digest(archive)}
         print(identity, summary[identity], flush=True)
-    build('cet6', {'python/hebao_modules/' + n: src / 'hebao_modules' / n for n in ('daily_study.py', 'handoff.py', 'prompts.py')})
+    build('cet6', {'python/libao_modules/' + n: src / 'libao_modules' / n for n in ('daily_study.py', 'handoff.py', 'prompts.py')})
     voice_assets = src / 'assets' / 'voice'
-    if (voice_assets / 'manifest.json').is_file():
-        build('fixed_voice', {'voice/' + p.relative_to(voice_assets).as_posix(): p for p in voice_assets.rglob('*') if p.is_file() and p.suffix.lower() in ('.json', '.wav')})
-    else:
-        catalog['modules']['fixed_voice'] = {'version': args.version, 'files': {}, 'bytes': 0, 'available': False}
+    if not (voice_assets / 'manifest.json').is_file():
+        raise FileNotFoundError('骨架缺少固定录音清单：' + str(voice_assets))
+    core_files = [p for p in voice_assets.rglob('*') if p.is_file() and p.suffix.lower() in ('.json', '.wav')]
+    summary['core_fixed_voice'] = {'bundled_with_base': True, 'files': len(core_files),
+                                   'uncompressed_bytes': sum(p.stat().st_size for p in core_files)}
     if args.voice_home:
         home = args.voice_home.resolve(); files = {}
         for folder in ('runtime', 'engine'):

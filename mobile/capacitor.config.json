@@ -1,0 +1,21 @@
+{
+  "appId": "com.hecate.companion",
+  "appName": "莉宝",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0c1220"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_libao",
+      "iconColor": "#B8CDE6"
+    },
+    "SystemBars": {
+      "insetsHandling": "disable",
+      "initialViewportFitValueHint": "cover",
+      "style": "DARK"
+    }
+  },
+  "loggingBehavior": "none"
+}

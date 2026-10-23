@@ -2,7 +2,8 @@
 from pathlib import Path, PurePosixPath
 import hashlib, importlib, json, os, shutil, stat, sys, tempfile, threading, zipfile
 
-IDS = {'cet6': '中国英语六级学习', 'fixed_voice': '固定场景语音', 'voice_engine': '本地文字转语音'}
+IDS = {'cet6': '中国英语六级学习', 'voice_engine': '语音生成与声音 API'}
+LEGACY_FIXED = 'fixed_voice'  # Read old installations; never offer it for removal.
 
 def digest(path):
     h = hashlib.sha256()
@@ -30,17 +31,22 @@ class OptionalModules:
         catalog_path = self.resources / 'module_catalog.json'
         self.managed = catalog_path.is_file()
         self.catalog = json.loads(catalog_path.read_text(encoding='utf8')) if self.managed else {}
-        if self.managed and (self.catalog.get('schema_version') != 1 or set(self.catalog.get('modules', {})) != set(IDS)):
+        if self.managed and (self.catalog.get('schema_version') != 1 or set(self.catalog.get('modules', {})) not in (set(IDS), set(IDS) | {LEGACY_FIXED})):
             raise ValueError('模块目录版本不兼容')
         self._lock = threading.RLock()
 
     def folder(self, identity):
-        if identity not in IDS: raise ValueError('未知模块')
+        if identity not in (*IDS, LEGACY_FIXED): raise ValueError('未知模块')
         path = (self.root / identity).resolve()
         if path.parent != self.root: raise ValueError('模块目录不安全')
         return path
 
     def installed(self, identity):
+        if identity == LEGACY_FIXED: return (self.fixed_home() / 'manifest.json').is_file()
+        if identity not in IDS: raise ValueError('未知模块')
+        return self._installed_package(identity)
+
+    def _installed_package(self, identity):
         if not self.managed: return True
         if not self.catalog['modules'][identity].get('available',True): return False
         try:
@@ -63,14 +69,18 @@ class OptionalModules:
             folder = self.folder('cet6')
             for name, info in self.catalog['modules']['cet6']['files'].items():
                 if digest(folder / name) != info['sha256']: raise ValueError('学习模块文件已变化，请重新安装。')
-            import hebao_modules
-            path = str(folder / 'python' / 'hebao_modules')
-            if path not in hebao_modules.__path__: hebao_modules.__path__.append(path)
+            import libao_modules
+            path = str(folder / 'python' / 'libao_modules')
+            if path not in libao_modules.__path__: libao_modules.__path__.append(path)
             importlib.invalidate_caches()
 
     def fixed_home(self):
-        if not self.managed: return self.resources / 'assets' / 'voice'
-        return self.folder('fixed_voice') / 'voice' if self.installed('fixed_voice') else self.resources / '_voice_not_installed'
+        bundled = self.resources / 'assets' / 'voice'
+        if (bundled / 'manifest.json').is_file() or not self.managed: return bundled
+        # Compatibility for an old base that already installed fixed_voice.zip.
+        if LEGACY_FIXED in self.catalog['modules'] and self._installed_package(LEGACY_FIXED):
+            return self.folder(LEGACY_FIXED) / 'voice'
+        return bundled
 
     def voice_home(self):
         if not self.installed('voice_engine'): raise FileNotFoundError('本地文字转语音模块尚未安装，请到模块中心安装。')
@@ -89,6 +99,7 @@ class OptionalModules:
             if 'module.json' not in names or z.getinfo('module.json').file_size > 4096: raise ValueError('缺少模块说明')
             meta = json.loads(z.read('module.json').decode('utf8'))
             identity = meta.get('id')
+            if identity == LEGACY_FIXED: raise ValueError('固定台词属于骨架，请使用带有内置录音的新版启动包。')
             if identity not in IDS: raise ValueError('未知模块')
             spec = self.catalog['modules'][identity]
             if not spec.get('available',True): raise ValueError('此启动版尚未提供该模块，请使用配套发布包。')
@@ -150,6 +161,8 @@ class OptionalModules:
         if (saved / 'catalog.json').is_file(): shutil.copy2(saved / 'catalog.json', staging / 'catalog.json')
 
     def uninstall(self, identity):
+        if identity == LEGACY_FIXED: raise ValueError('固定台词属于骨架，不能作为语音模块移除。')
+        if identity not in IDS: raise ValueError('未知模块')
         if not self.managed: raise ValueError('兼容版资源不由此入口移除。')
         with self._lock:
             folder = self.folder(identity)

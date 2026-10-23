@@ -35,6 +35,10 @@ class VoiceTests(unittest.TestCase):
         self.v.emit('workbench');self.time+=1;self.assertTrue(self.v.emit('sleep'))
     def test_stop_owner_does_not_stop_another_scene(self):
         self.v.emit('workbench');self.v.stop('reading');self.assertEqual(self.b.stops,0);self.v.stop('workbench');self.assertEqual(self.b.stops,1)
+    def test_workbench_sleep_stop_does_not_stop_desktop_sleep(self):
+        self.assertTrue(self.v.emit('sleep'));self.v.stop('workbench_scene');self.assertEqual(self.v.owner,'sleep')
+        self.time+=1;self.assertTrue(self.v.emit('sleep',owner='workbench_scene'));self.assertEqual(self.v.owner,'workbench_scene')
+        self.v.stop('workbench_scene');self.assertIsNone(self.v.current)
     def test_close_cannot_play_again(self):
         self.v.emit('workbench');self.v.close();self.assertFalse(self.v.preview('welcome'));self.assertFalse(self.v.emit('drag'));self.assertIsNone(self.v.current)
     def test_wake_boundaries(self):

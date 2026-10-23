@@ -1,7 +1,7 @@
 """Per-scene approved recording choices; explicit saves, no synthesis or autoplay."""
 import tkinter as tk
 from tkinter import ttk
-from hecate_ui import BG,PANEL,INK,MUTED,ACCENT,ACCENT_INK,BORDER,FOCUS,PREFIX,font,label,Button,header,configure_window
+from ui_theme import BG,PANEL,INK,MUTED,ACCENT,ACCENT_INK,BORDER,FOCUS,PREFIX,font,label,Button,header,configure_window
 from scene_voice import TRIGGER_LABELS,fixed_voice_rows
 
 EVENT_NAMES={'workbench':'工作台首次入场','reading_start':'开始看书','reading_click':'看书点击回应','sleep':'抱帽入睡','wake_morning':'醒来 · 上午','wake_afternoon':'醒来 · 下午','wake_evening':'醒来 · 晚上','drag':'开始拖拽','slide':'松手滑行'}
@@ -11,7 +11,7 @@ def open_voice_bindings_window(pet):
     w=getattr(pet,'voice_bindings_window',None)
     if w is not None and w.winfo_exists():w.deiconify();w.lift();return w
     w=tk.Toplevel(pet.root);pet.voice_bindings_window=w
-    configure_window(w,'赫宝 · 固定语音触发设置',780,700,(620,600))
+    configure_window(w,'莉宝 · 固定语音触发设置',780,700,(620,600))
     header(w,'场景与语音','点击录音可多选；多选时随机播放，不选则不播放。保存后生效。')
     panel=tk.Frame(w,bg=BG);panel.pack(fill='both',expand=True,padx=22,pady=(0,18))
     event_keys=list(EVENT_NAMES);event=tk.StringVar(w,EVENT_NAMES[event_keys[0]])
@@ -61,7 +61,7 @@ def open_voice_bindings_window(pet):
         if not ids:return
         index=box.index('active');identity=ids[index]
         ok=pet.voice_module.play_fixed(identity)
-        status.set('正在试听：'+rows[index]['text'] if ok else '无法试听，请取消静音并显示赫宝。')
+        status.set('正在试听：'+rows[index]['text'] if ok else '无法试听，请取消静音并显示莉宝。')
     controls=tk.Frame(panel,bg=BG);controls.pack(fill='x')
     w.save_binding_button=Button(controls,text='保存这个场景',primary=True,command=commit);w.save_binding_button.pack(side='left',padx=(0,8))
     w.disable_binding_button=Button(controls,text='关闭本场景声音',command=lambda:commit('off'));w.disable_binding_button.pack(side='left')

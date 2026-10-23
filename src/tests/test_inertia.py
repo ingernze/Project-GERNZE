@@ -1,6 +1,6 @@
 import math
 import unittest
-from hebao_inertia import Bounds, CoastController, InertiaConfig, InertiaMotion, ReleaseVelocity
+from character_inertia import Bounds, CoastController, InertiaConfig, InertiaMotion, ReleaseVelocity
 
 AREA = Bounds(-10000, -10000, 10000, 10000)
 

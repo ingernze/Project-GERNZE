@@ -1,6 +1,6 @@
 """Voice home, sharing the established starry-study palette and native controls."""
 import tkinter as tk
-from hecate_ui import BG, PANEL, MUTED, GOLD, QUIET, BORDER, label, header, Button, ScrollFrame, configure_window
+from ui_theme import BG, PANEL, MUTED, GOLD, QUIET, BORDER, label, header, Button, ScrollFrame, configure_window
 
 
 def open_voice_modules(pet):
@@ -14,8 +14,8 @@ def open_voice_modules(pet):
         return existing
     window = tk.Toplevel(pet.root)
     pet.voice_modules_window = window
-    configure_window(window, '赫宝 · 声音', 680, 540, (540, 360))
-    header(window, '声音', '听熟悉的台词，也可以让赫宝说出你写下的话。')
+    configure_window(window, '莉宝 · 声音', 680, 540, (540, 360))
+    header(window, '声音', '听熟悉的台词，也可以让莉宝说出你写下的话。')
     page = ScrollFrame(window)
     page.pack(fill='both', expand=True, padx=22, pady=(0, 18))
     for number, title, description, action, text, attribute in (

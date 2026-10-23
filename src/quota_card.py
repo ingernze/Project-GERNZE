@@ -7,8 +7,8 @@ from decimal import Decimal
 import tkinter as tk
 from tkinter import messagebox
 
-from hebao_quota.models import Snapshot
-from hecate_ui import (BG, PANEL, RAISED, INK, MUTED, GOLD, BORDER, FOCUS, ERROR,
+from usage_monitor.models import Snapshot
+from ui_theme import (BG, PANEL, RAISED, INK, MUTED, GOLD, BORDER, FOCUS, ERROR,
                        GOOD, Button, Switch, ScrollFrame, font, label, header, configure_window)
 
 
@@ -92,7 +92,7 @@ class QuotaCard(tk.Toplevel):
     """State-only DeepSeek detail; the original host owns requests and keys."""
     def __init__(self, parent, *, on_save, on_delete, on_toggle, on_refresh, on_close):
         super().__init__(parent)
-        configure_window(self, '赫宝 · DeepSeek 余额与设置', 580, 565)
+        configure_window(self, '莉宝 · DeepSeek 余额与设置', 580, 565)
         self.attributes('-topmost', True)
         self._on_save, self._on_delete = on_save, on_delete
         self._on_toggle, self._on_refresh, self._on_close = on_toggle, on_refresh, on_close

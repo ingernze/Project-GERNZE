@@ -92,7 +92,7 @@ class SceneVoice:
         self.binding_overrides=accepted
     def _active(self):
         return self.current is not None and self.clock()<self.until
-    def emit(self,event):
+    def emit(self,event,*,owner=None):
         if self.closed or not self.enabled():return False
         if event not in self.PRIORITY or event=='preview':return False
         key=event
@@ -105,7 +105,7 @@ class SceneVoice:
         if now-self.last.get(event,-1e10)<.35:return False
         if self._active() and self.PRIORITY[event]<self.priority:return False
         identifier=self.choose(ids)
-        if self._play(identifier,self.OWNERS[event],self.PRIORITY[event]):
+        if self._play(identifier,owner or self.OWNERS[event],self.PRIORITY[event]):
             self.last[event]=now;return True
         return False
     def preview(self,identifier):
@@ -150,9 +150,9 @@ class SceneVoice:
 
 
 TRIGGER_LABELS = {
-    'workbench': '首次启动赫宝打开工作台，入场动画接住怀表约2.1秒时；同一进程不重播',
+    'workbench': '首次启动莉宝打开工作台，入场动画接住怀表约2.1秒时；同一进程不重播',
     'reading_start': '进入看书动作时，随机播放其中一条',
-    'reading_click': '看书时单击赫宝，抬脸回应时随机播放',
+    'reading_click': '看书时单击莉宝，抬脸回应时随机播放',
     'sleep': '进入抱帽睡觉动作时',
     'wake_morning': '从睡觉醒来时，本地时间0:00—11:59',
     'wake_afternoon': '从睡觉醒来时，本地时间12:00—16:59',

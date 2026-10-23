@@ -1,0 +1,156 @@
+/* Approved gold reference: exact supplied shelf art and paper/ink palette.
+ * Visual adapter only. Data, book selection and reader lifecycle remain original. */
+:root{--shelf-v6-asset-0:url("assets/gold/shelf-frame.svg");--shelf-v6-asset-1:url("assets/gold/shelf-board.svg");--shelf-v6-asset-2:url("assets/gold/shelf-teacups.png")}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-header{display:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf]{background-image:radial-gradient(ellipse at 50% 24%,#72877e1c,transparent 66%),linear-gradient(150deg,#263d50,#1a3147);background-color:#1d3448}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-shelf-scroll{display:flex;flex-direction:column;overflow:hidden;padding:0 0 6px}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-intro{padding:15px 20px 0;text-align:center;flex:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-kicker{font-size:10px;color:#c0c6b7;letter-spacing:.22em;margin:0}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-stage{height:342px;min-height:220px;flex:1;margin:0;overflow:hidden;contain:layout paint}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-stage::before{inset:18px 8% 22px;border-width:3px;border-color:#8d80685c;border-radius:110px 110px 3px 3px;background:radial-gradient(ellipse at 48% 12%,#e9e4c5aa,transparent 76%),linear-gradient(110deg,#9bafab,#c7ccbe 48%,#879e9e);box-shadow:inset 0 2px 12px #273f4b3b,0 0 0 1px #bac3b025}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-stage::after{height:7px;bottom:15px;border-color:#d1c09b22;background:#74634d;box-shadow:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-rail{height:5px;bottom:23px;background:linear-gradient(#b09b79,#75664f);box-shadow:0 4px 5px #11273a33}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-bank-caption{display:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-selection{flex:none;padding:8px 16px 0}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-current-month{font-size:23px;color:#f2ecdd;letter-spacing:.1em;text-shadow:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-current-count{font-size:10px;margin-top:4px;color:#b7c5bf}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-bank-nav{margin-top:9px;gap:32px;min-height:44px}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-shelf-hint{display:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-shelf-footer{padding:10px 22px 14px;border:0;background:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-primary{max-width:340px;display:block;margin:auto;min-height:45px;border-radius:9px;font-size:13px;background:#e9e3d4;box-shadow:none;border:1px solid #d4c7aa;color:#344e63}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=reader]{background:#f8f4eb}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-paper{position:relative;flex:1;width:100%;max-width:none;margin:0;border-radius:0;border:0;background:linear-gradient(90deg,#cbbca826,transparent 9px),#f8f4eb;box-shadow:inset 3px 0 #d0c2a924}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-day-heading{padding:18px 23px 14px;gap:3px 10px;border-color:#c7bcaa4d}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-paper-label{font-size:9px;color:#96947f;letter-spacing:.24em}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-date-select{font-size:29px;font-weight:400;color:#344c5a;letter-spacing:.02em;min-height:46px;padding-right:22px;background:transparent}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-weekday{font-size:11px;color:#929b8a}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-day-scroll{padding:21px 23px 24px;font-size:16px;line-height:2;overscroll-behavior-y:contain;scrollbar-gutter:stable;scrollbar-color:#aeb6a277 transparent;-webkit-overflow-scrolling:touch}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-entry-count{font-size:10px;margin-bottom:19px;color:#9a9e8d}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-entry-text{font-size:16px;line-height:2;color:#354d5a;letter-spacing:.025em}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-entry{border-color:#b8bdac4d;padding-bottom:21px;margin-bottom:25px}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-entry-conversation .mb-sources,:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-page-end{display:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-sources{font-size:9px;color:#a0a28f}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-source{background:#eae9df;color:#7d8982}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-day-nav{justify-content:center;grid-template-columns:minmax(76px,98px) minmax(55px,72px) minmax(76px,98px);gap:6px;padding:12px 16px 16px;margin-bottom:clamp(12px,3dvh,26px);border-color:#c5bdab50;background:#f4f0e7}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-page-button{justify-self:stretch;min-width:0;width:100%;min-height:44px;font-size:12px;padding:7px 4px;border:1px solid #b4bdb255;border-radius:9px;background:#f8f6ed;color:#637f80}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-page-number{min-width:0}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-page-number strong{font:15px/1.5 Georgia,serif;color:#657e7f}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-page-number span{display:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-flip-back,:is(.desktop-books-overlay,.scene-shelf-art) .mb-books .mb-flip-forward{animation:dl-day-arrive 160ms ease-out both}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf]{background-color:#1b3045;background-image:var(--shelf-v6-asset-0),linear-gradient(130deg,#b3c5d609,transparent 45%,#06172b0d);background-size:100% 100%;background-position:center;color:#f2e9d6}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-shelf-scroll{background:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-intro{min-height:62px;padding:22px 19px 0 125px;text-align:right}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-kicker{color:#d7d3c5;letter-spacing:.2em}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-stage{isolation:isolate}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-stage::before{display:block;inset:auto;top:4px;left:calc(50% - 195px);width:390px;height:342px;border:0;border-radius:0;background:var(--shelf-v6-asset-1) center/100% 100% no-repeat;box-shadow:none;pointer-events:none;z-index:0;transform-origin:50% 0}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-stage::after{display:block;content:"";position:absolute;inset:auto;top:0;right:2%;width:27%;height:auto;aspect-ratio:1;background:var(--shelf-v6-asset-2) center/contain no-repeat;border:0;box-shadow:none;z-index:1;pointer-events:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-rail{display:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-current-month{font-size:24px;letter-spacing:.09em;color:#f4ecd9;text-shadow:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-current-count{color:#d0d0c4;text-shadow:none;font-size:10px}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-bank-nav .mb-icon{background:transparent;border-color:#c6b99477;color:#f0e5cd;box-shadow:none}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-bank-index{color:#e2dfd1}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-shelf-footer{background:none;padding-inline:24px}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-primary{border:1px solid #c3a578;background:#f2e7d1;color:#233d51;border-radius:18px;box-shadow:inset 0 0 0 2px #1b3045,inset 0 0 0 3px #d2b78c;font-weight:400;letter-spacing:.12em}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-status{color:#d3d3c8}
+:is(.desktop-books-overlay,.scene-shelf-art) .mb-books[data-view=shelf] .mb-secondary{color:#f1e8d4;background:transparent;border-color:#af9c7659}
+/* Desktop conversation uses the reference's single ivory reading surface. */
+.desktop-scene-stage[data-scene-mode=room] .scene-room>.desktop-dialogue{padding:0;max-height:78%;height:650px;background:#f8f4eb;color:#304859;border:1px solid #c8b992;border-radius:18px 18px 0 0;box-shadow:0 16px 42px #0c1c3540;backdrop-filter:none;overflow:hidden;--hebao-ink:#304859;--hebao-muted:#7b867f;--hebao-tint:#eae9df;--hebao-hover-strong:#dde3dc;--hebao-control-line:#b6c0b587;--line:#cbc4b770;--muted:#7b867f}
+.desktop-scene-stage .desktop-chat-heading{flex:none;min-height:76px;padding:15px 20px;margin:0;border-bottom:1px solid #c8beab70;background:linear-gradient(115deg,#faf7f0,#eeeade);gap:10px}
+.desktop-scene-stage .desktop-chat-heading>div{font-family:"Songti SC","Noto Serif CJK SC",SimSun,serif;color:#2d465f;font-size:21px;letter-spacing:.15em}
+.desktop-scene-stage .desktop-chat-caption{font-size:10px;color:#7b867f;letter-spacing:.12em}
+.desktop-scene-stage .desktop-fold-chat{min-height:38px;padding:6px 11px;border:1px solid #a4b0b243;border-radius:9px;background:#e7ece8;color:#344e62;font-size:12px;box-shadow:none}
+.desktop-scene-stage .desktop-history-tools{flex:none;justify-content:center;padding:12px 20px 0;margin:0}
+.desktop-scene-stage .desktop-history-tools button{min-height:36px;padding:5px 12px;background:#eae9df;border:1px solid #c7c8b95c;border-radius:7px;color:#74837f;font-size:11px;box-shadow:none}
+.desktop-scene-stage .desktop-chat-history{flex:1;padding:17px 20px 8px;max-height:none;min-height:0;overflow-y:auto;scrollbar-color:#b3b9ad99 transparent;scrollbar-gutter:stable}
+.desktop-scene-stage .desktop-chat-turn{padding:0;margin:0 0 30px;border:0}
+.desktop-scene-stage .desktop-message-label{font-size:10px;line-height:1.5;margin:0 2px 8px;color:#8b9085;letter-spacing:.08em}
+.desktop-scene-stage .desktop-message-label:first-child{text-align:right}
+.desktop-scene-stage .desktop-message{font-size:16px;line-height:1.95;letter-spacing:.02em;box-shadow:none;white-space:pre-wrap;overflow-wrap:anywhere}
+.desktop-scene-stage .desktop-message-user{max-width:90%;margin:0 0 25px auto;padding:10px 15px;background:#526e83;border:1px solid #4c697e;border-radius:14px 4px 14px 14px;color:#fffdf6}
+.desktop-scene-stage .desktop-message-assistant{padding:1px 0 1px 12px;margin:0;border:0;border-left:2px solid #b6c4bb7a;border-radius:0;background:none;color:#304859}
+.desktop-scene-stage .desktop-message-assistant::before{display:none}
+.desktop-scene-stage .desktop-chat-empty{color:#7b867f;background:none;border:0;font-size:15px;padding:28px 0}
+.desktop-scene-stage .desktop-history-note{padding:0 20px;color:#889086}
+.desktop-scene-stage .desktop-dialogue .scene-chat-input{flex:none;display:flex;align-items:flex-end;gap:8px;margin:0;padding:11px 18px 10px;border-top:1px solid #cbc4b770;background:#f3f0e7}
+.desktop-scene-stage .desktop-dialogue .scene-chat-input textarea{flex:1;min-width:0;height:54px;min-height:54px;max-height:130px;padding:12px;border:1px solid #b6c0b587;border-radius:12px;background:#fcfaf4;color:#324f60;box-shadow:none;font-size:15px;line-height:1.7;resize:vertical}
+.desktop-scene-stage .desktop-dialogue .scene-chat-input textarea::placeholder{color:#959f94}
+.desktop-scene-stage .desktop-dialogue .scene-chat-input textarea:focus{outline:2px solid #8da6a033;outline-offset:0;border-color:#819b9b}
+.desktop-scene-stage .desktop-dialogue .scene-chat-input button{min-height:48px;padding:10px 15px;border:1px solid #4d6d7e;border-radius:9px;background:#516f80;color:#fcfaf2;box-shadow:none;font-size:13px}
+.desktop-scene-stage .desktop-dialogue>.scene-status{flex:none;margin:0;padding:0 20px 12px;background:#f3f0e7;color:#7b867f;font-size:10px}
+.desktop-scene-stage .desktop-chat-footer{margin:0;min-height:0;background:#f3f0e7;padding:0 18px}
+.desktop-chat-footer:has(button:not([hidden])){padding-bottom:12px}
+.scene-start-conversation{border-color:#c3a578;border-radius:18px;background:#f2e7d1;color:#233d51;box-shadow:inset 0 0 0 2px #1b3045,inset 0 0 0 3px #d2b78c,0 7px 20px #050d1955}
+.scene-jelly-tools button{border-color:#c6b99477;background:#1b3045eb;color:#f0e5cd;box-shadow:inset 0 0 0 2px #d2b78c0e,0 3px 14px #08172c4d}
+.scene-jelly-tools button:hover{background:#344e63}
+/* Full bookshelf: preserve the desktop canvas; match the approved gold stage. */
+.desktop-books-shell{width:min(640px,100%);height:min(870px,calc(100dvh - 48px));border-color:#bca16f66;border-radius:18px;background:#1b3045}
+.desktop-books-shell .mb-books .mb-header{display:flex;padding:9px 20px;min-height:58px;background:#1b3045;border:0}
+.desktop-books-shell .mb-books .mb-header .mb-heading{gap:8px}
+.desktop-books-shell .mb-books .mb-heading-copy{color:#f2e9d6;font-size:15px;font-weight:400}
+.desktop-books-shell .mb-books .mb-sigil{font-size:24px;color:#c8ae77}
+.desktop-books-shell .mb-books .mb-eyebrow{font-size:9px}
+.desktop-books-shell .mb-books .mb-title{font-size:16px;font-weight:400}
+.desktop-books-shell .mb-books .mb-icon{color:#f0e5cd;border-color:#c6b99477;background:transparent}
+.desktop-books-shell .mb-books[data-view=shelf] .mb-shelf-scroll{display:flex;position:relative;flex-direction:column;padding:0 0 6px;overflow-y:auto;min-height:0}
+.desktop-books-shell .mb-books[data-view=shelf] .mb-intro{padding:12px 24px 0;min-height:40px;text-align:right}
+.desktop-books-shell .mb-books[data-view=shelf] .mb-intro h2,.desktop-books-shell .mb-books[data-view=shelf] .mb-intro-note{display:none}
+.desktop-books-shell .mb-books[data-view=shelf] .mb-stage{width:100%;max-width:none;height:342px;min-height:342px;flex:1;margin:0}
+.desktop-books-shell .mb-books[data-view=shelf] .mb-selection{position:static;inset:auto;width:auto;display:block;transform:none;padding:8px 24px 0;flex:none}
+.desktop-books-shell .mb-books[data-view=shelf] .mb-bank-nav{margin:12px auto 0;min-height:44px}
+.desktop-books-shell .mb-books[data-view=shelf] .mb-shelf-footer{padding:12px 24px 20px}
+.desktop-books-shell .mb-books[data-view=shelf] .mb-primary{max-width:460px}
+.desktop-books-shell .mb-books .mb-paper{max-width:none;width:100%;margin:0}
+.desktop-books-shell .mb-books .mb-reader-layout{max-width:none;width:100%}
+.desktop-books-shell .mb-books .mb-entry-text{font-size:16px;line-height:2}
+.desktop-books-shell .mb-books .mb-day-scroll{padding:21px 28px 24px}
+.desktop-books-shell .mb-books .mb-day-nav{margin-bottom:0}
+.desktop-books-shell .mb-books .mb-sources,.desktop-books-shell .mb-books .mb-page-end{display:flex}
+.desktop-books-shell .mb-books .mb-page-end{display:block}
+/* Small physical shelf: the same real art without a miniature page border. */
+.scene-arch-shelf{aspect-ratio:520/354}
+.scene-shelf-art .mb-books[data-view=shelf]{background:none!important}
+.scene-shelf-art .mb-books .mb-stage{overflow:visible!important;contain:none}
+.scene-shelf-art .mb-books[data-view=shelf] .mb-stage::before{top:4px;left:65px;width:390px;height:342px;background:var(--shelf-v6-asset-1) center/100% 100% no-repeat;border:0;border-radius:0;box-shadow:none}
+.scene-shelf-art .mb-books[data-view=shelf] .mb-stage::after{top:0;right:2%;width:27%;aspect-ratio:1;background:var(--shelf-v6-asset-2) center/contain no-repeat}
+.scene-shelf-art .mb-bank-caption{display:none}
+@media(max-width:750px){.desktop-scene-stage[data-scene-mode=room] .scene-room>.desktop-dialogue{padding:0}.desktop-scene-stage .desktop-chat-caption{display:none}.desktop-scene-stage .desktop-chat-heading{padding:12px 15px;min-height:64px}.desktop-scene-stage .desktop-chat-history{padding-inline:15px}.desktop-books-overlay{padding:12px}.desktop-books-shell{height:calc(100dvh - 24px)}}
+@media(max-height:720px){.desktop-books-shell .mb-books[data-view=shelf] .mb-stage{zoom:.74;width:135.135%;align-self:center}.desktop-books-shell .mb-books[data-view=shelf] .mb-intro{min-height:24px;padding-top:6px}.desktop-books-shell .mb-books[data-view=shelf] .mb-current-month{font-size:20px}.desktop-books-shell .mb-books[data-view=shelf] .mb-shelf-footer{padding-block:8px 12px}.desktop-books-shell .mb-books .mb-header{min-height:48px;padding-block:4px}}
+
+.desktop-books-shell .mb-books .mb-header .mb-title{color:#f2e9d6;font:400 16px/1.5 "Songti SC",SimSun,serif;letter-spacing:.12em}
+.desktop-books-shell .mb-books .mb-header .mb-eyebrow{color:#c0c6b7}
+.desktop-books-shell .mb-books .mb-header .mb-icon{background:transparent;color:#f0e5cd;border:1px solid #c6b99477;border-radius:50%;box-shadow:none}
+/* Shared desktop chrome follows the supplied navy, ivory and muted brass palette. */
+:root[data-theme=dark]{--hebao-bg:#182b3e;--hebao-nav:#1b3045;--hebao-surface:#263d50;--hebao-input:#20364b;--hebao-ink:#f2e9d6;--hebao-soft:#d0d0c4;--hebao-muted:#b0bbbd;--hebao-line:#c8ae7726;--hebao-accent:#c8ae77;--hebao-silver:#f2e7d1;--hebao-control-line:#c6b99455;--hebao-card-line:#c8ae773d;--hebao-hover:#f2e7d108;--hebao-hover-strong:#f2e7d114;--hebao-selection:#344e63;--hebao-selection-hover:#405b70;--hebao-selection-ink:#f2e9d6;--hebao-tint:#344e63;--hebao-tint-ink:#e2dfd1;--hebao-action-bg:#f2e7d1;--hebao-action-ink:#233d51;--hebao-quiet-surface:#20364b;--hebao-detail-surface:#263d50;--hebao-scrollbar:#73858a}
+:root[data-theme=light]{--hebao-bg:#f6f1e7;--hebao-nav:#eee9df;--hebao-surface:#faf7f0;--hebao-input:#fcfaf4;--hebao-ink:#304859;--hebao-soft:#566a7b;--hebao-muted:#748087;--hebao-line:#b4a28147;--hebao-control-line:#b6c0b587;--hebao-selection:#dde4df;--hebao-selection-ink:#344e62;--hebao-accent:#a68c5d}
+
+.scene-jelly-tools button{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+
+/* Focus stays inside the room: blurred scenery and floating books, no full navy panel. */
+.scene-room>.desktop-books-focus{position:absolute;inset:0;z-index:40;padding:16px;background:#0a182c5c;backdrop-filter:blur(12px) saturate(.82);-webkit-backdrop-filter:blur(12px) saturate(.82);border-radius:inherit}
+.desktop-books-focus .desktop-books-shell{width:min(760px,100%);height:100%;max-height:100%;min-height:0;background:transparent;border:0;border-radius:0;box-shadow:none;overflow:hidden}
+.desktop-books-focus .desktop-books-host{min-height:0;background:transparent}
+.desktop-books-focus .mb-books[data-view=shelf]{background:none!important;border:0;box-shadow:none;overflow:hidden}
+.desktop-books-focus .desktop-books-shell .mb-books .mb-header{min-height:52px;padding:4px 10px;background:transparent;border:0;box-shadow:none}
+.desktop-books-focus .desktop-books-shell .mb-books .mb-header .mb-icon{background:#1b304566;backdrop-filter:blur(5px)}
+.desktop-books-focus .desktop-books-shell .mb-books .mb-header .mb-eyebrow{display:none}
+.desktop-books-focus .desktop-books-shell .mb-books .mb-header .mb-title{font-size:17px;letter-spacing:.14em;text-shadow:0 2px 8px #07192999}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-shelf-scroll{flex:1;min-height:0;justify-content:center;padding:0;overflow-y:auto;background:transparent}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-intro{min-height:24px;padding:3px 15px 8px;text-align:center}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-stage{width:520px;max-width:100%;height:342px;min-height:342px;flex:none;align-self:center;margin:0;zoom:1}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-selection{padding:14px 16px 0;text-shadow:0 2px 8px #07192980}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-current-month{font-size:24px;color:#fff3da}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-current-count{color:#e4e6db}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-bank-nav{margin-top:10px}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-shelf-footer{flex:none;padding:12px 16px 6px;border:0;background:transparent}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-primary{max-width:340px;min-height:44px}
+.desktop-books-focus .desktop-undated{color:#e5e8de;background:#1b304577;border-radius:8px}
+.desktop-books-focus .mb-books[data-view=reader]{border-radius:14px;background:#f8f4eb;box-shadow:0 16px 60px #07192955}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=reader] .mb-header{background:#1b3045;padding:6px 14px;min-height:54px}
+.scene-room.is-books-focused>.scene-floor-shelf{visibility:hidden}
+.desktop-books-focus .mb-books .mb-status{color:#f3ebdb;text-shadow:0 2px 8px #07192999}
+@media(max-height:760px){.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-stage{zoom:.8;max-width:125%;height:342px;min-height:342px}.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-intro{display:none}.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-selection{padding-top:6px}.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-current-month{font-size:20px}.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-bank-nav{margin-top:5px}}
+
+/* Preserve the real shelf art while its archive is empty, loading or unavailable. */
+:is(.scene-shelf-art,.desktop-books-overlay) .mb-stage-placeholder .mb-status{position:absolute;z-index:2;left:20%;right:20%;top:50%;margin:0;padding:10px;text-align:center;color:#52697a;text-shadow:none;font-size:16px;line-height:1.8;overflow-wrap:anywhere}
+
+:is(.scene-shelf-art,.desktop-books-overlay) .mb-stage-placeholder .mb-status p{color:inherit;text-shadow:none}

@@ -6,7 +6,7 @@ STYLE_NAMES={'style2':'第一套 · 插画（默认）','original':'第二套 ·
 def style_paths(root,style):
     root=Path(root)
     if style=='original':
-        return dict(idle=root/'assets/pixel/hebao/idle',reading=root/'assets/pixel/hebao/reading',actions=root/'assets/pixel/hebao/actions',walk=root/'assets/walk',grab=root/'assets/grab')
+        return dict(idle=root/'assets/pixel/libao/idle',reading=root/'assets/pixel/libao/reading',actions=root/'assets/pixel/libao/actions',walk=root/'assets/walk',grab=root/'assets/grab')
     if style!='style2':raise ValueError('Unknown character style')
     base=root/'assets/styles/style2'
     return dict(idle=base,reading=None,actions=base/'actions',walk=base/'walk',grab=base/'grab')

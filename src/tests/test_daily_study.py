@@ -8,8 +8,15 @@ from contextlib import closing
 import tempfile
 import unittest
 
-from hebao_modules.sample import SAMPLE
-from workbench.bridge import Bridge
+from libao_modules.sample import SAMPLE
+from workbench.bridge import Bridge as WorkbenchBridge
+from optional_modules import OptionalModules
+
+
+def Bridge(data_dir):
+    # These tests exercise study behavior, independent of installed packages.
+    return WorkbenchBridge(data_dir, modules=OptionalModules(Path(__file__).parent/'fixtures', data_dir))
+
 
 
 class DailyStudyTests(unittest.TestCase):

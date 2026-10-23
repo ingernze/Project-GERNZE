@@ -1,0 +1,7 @@
+# Third-party and supplied sources
+
+- matter-0.20.0.min.js: matter-js 0.20.0 from its npm release, https://github.com/liabru/matter-js ; MIT, copyright Liam Brummitt. Full license in MATTER-LICENSE.txt. Official engine and constraint API checked against https://brm.io/matter-js/docs/ ; existing soft-body example/release and known pointer cancel/resize issues reviewed before using a custom scope-owned pointer constraint. Uses only bundled trusted numerical options, no imported physics JSON or Matter.Common.extend on user data. No network at runtime.
+- brand-jelly.js: byte-for-byte supplied 2号电脑版_手机导航与莉宝果冻素材_20261019.zip/brand-jelly.js. Shared GernzeJelly.create unchanged. The desktop adapter uses a distinct button ID and owns its listeners/timers, so the mobile one-shot #brandPet mount is not triggered.
+- assets/jelly/libao-desktop.png and chibi-idle.png: original supplied brand/libao-desktop.png and navigation/image-d51b861121744ff4.png, respectively, unmodified. Project-limited use per supplied task; no claim of public redistribution permission.
+
+- assets/gold/: exact three embedded images extracted from the user-approved gernze_mobile_books_art_gold_final(1).html. Original MIME types preserved (two SVGs and one PNG); filenames, original variables and SHA256 in assets/gold/SOURCE.json. scene-gold.css adapts that file’s final muted-gold shelf rules and ivory/blue-gray conversation palette to the existing desktop mounts. Original book cover artwork is unchanged.

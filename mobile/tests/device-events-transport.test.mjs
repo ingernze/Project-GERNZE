@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createEventTransport} from '../src/device-events/event-transport.mjs';
+const P='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',R='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+test('native narrow bridge supplies only fixed arguments, not URL or credentials',async()=>{const calls=[];const t=createEventTransport({randomUUID:()=>R,plugin:{fetchEvents:async args=>{calls.push(args);return {};}}});await t.fetch({pairingId:P,cursor:3,limit:6,stream_id:null});assert.deepEqual(calls,[{pairingId:P,cursor:3,limit:6,streamId:null,requestId:R}]);});
+test('cancel targets request ID and discards native late success',async()=>{const controller=new AbortController(),calls=[];let finish;const t=createEventTransport({randomUUID:()=>R,plugin:{fetchEvents:()=>new Promise(r=>{finish=r;}),cancelEventRequest:async x=>calls.push(x)}});const run=t.fetch({pairingId:P,cursor:0,limit:6,stream_id:null,signal:controller.signal});controller.abort();finish({events:[]});await assert.rejects(run,e=>e.code==='cancelled');assert.deepEqual(calls,[{requestId:R}]);});

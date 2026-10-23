@@ -4,9 +4,9 @@ import json
 import os
 import tempfile
 
-from hebao_modules.core import MemoryModule, Store, StudyModule, text_value
+from libao_modules.core import MemoryModule, Store, StudyModule, text_value
 from optional_modules import OptionalModules
-from hebao_modules.security import strict_json
+from libao_modules.security import strict_json
 
 
 CONTRACTS = {
@@ -27,7 +27,6 @@ CONTRACTS = {
     'handoff.parse': ({'lesson_id', 'text'}, set()),
     'handoff.commit': ({'result'}, {'minutes', 'verified', 'review_at'}),
     'memory.list': (set(), set()),
-    'memory.save': ({'title', 'body', 'decision'}, set()),
     'reminder.list': (set(), set()),
     'backup.export': (set(), set()),
     'appearance.set': ({'theme'}, set()),
@@ -62,8 +61,8 @@ class Bridge:
     def _learning(self):
         self.modules.activate_study()
         if self.daily is None:
-            from hebao_modules.handoff import WebHandoff
-            from hebao_modules.daily_study import DailyStudy
+            from libao_modules.handoff import WebHandoff
+            from libao_modules.daily_study import DailyStudy
             self.handoff = WebHandoff(self.study)
             self.daily = DailyStudy(self.study)
 
@@ -115,7 +114,8 @@ class Bridge:
             return {'lessons': self.study.lessons() if installed else [],
                     'progress': self.study.progress_summary() if installed else {},
                     'due_reviews': self.study.due_reviews() if installed else [],
-                    'optional_modules': {key: self.modules.installed(key) for key in ('cet6','fixed_voice','voice_engine')}}
+                    'optional_modules': {key: self.modules.installed(key) for key in ('cet6','voice_engine')},
+                    'core_features': {'fixed_voice': self.modules.installed('fixed_voice')}}
         if command == 'lesson.import':
             return {'lesson_id': self.study.import_lesson(p['payload'])}
         if command == 'lesson.get':
@@ -142,9 +142,6 @@ class Bridge:
                 verified=p.get('verified', False), review_at=p.get('review_at'))
         if command == 'memory.list':
             return self.memory.records()
-        if command == 'memory.save':
-            return {'record_id': self.memory.add(kind='project_log', title=p['title'], body=p['body'],
-                decision=p['decision'], source='用户在赫宝工作台手动保存', memory_confirmed=False)}
         if command == 'reminder.list':
             return self.store.reminders()
         if command == 'backup.export':
