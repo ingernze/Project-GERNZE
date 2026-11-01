@@ -16,9 +16,9 @@
 
 ## 最近更新
 
-以下为近期本地版本记录。首次准备公开的版本是 **1.1.1**，更新记录不代表每个历史版本都已在 GitHub 发布。
+当前公开版本为 **1.1.2**。下方同时保留历史本地版本记录，不代表每个历史版本都曾在 GitHub 发布。
 
-- **1.1.2 · 本地更新至2026-10-31，未公开发行**：完善回复、记忆设置与真实步骤进度；分类资料按歌单、见闻与课程专题收纳，支持标题搜索，手机增加只读分类书架接回。手机版本轮安装尚未确认，公开候选已按本轮源码重建，仍未公开发行。[当前状态与限制](docs/release-1.1.2.md)
+- **1.1.2 · 2026-11-01 已公开发布**：完善聊天回复、记忆设置与实际进度显示；分类书架按歌单、见闻与课程专题收纳，支持标题搜索，手机可沿配对通道接回只读分类资料。公开Android构建35，课程目前仅目录。[下载发行版](https://github.com/ingernze/Project-GERNZE/releases/tag/v1.1.2) · [更新与验证边界](docs/release-1.1.2.md)
 - **1.1.1 · 2026-10-22**：电脑端加入独立自动记忆审查，补充同步与审批修复，手机版开场加入版本角标。[详情](docs/release-1.1.1.md)
 - **1.1.0 · 2026-10-20**：完善记忆同步、审查与公开构建；手机可上传简版聊天原文，由电脑统一审查。[详情](docs/release-1.1.0.md)
 - **1.0.26 · 2026-10-20**：更新手机对话与月册书架，完善记忆同步及独立 Codex 接入插件。[详情](docs/release-1.0.26.md)
@@ -115,7 +115,7 @@ Android 端可独立连接用户配置的 API，在日常使用时，可以独�
 
 ## 当前进度与路线图
 
-下图以 **1.1.1 准备公开的范围**为基础。候选表示已有独立小样或代码，但未随该版本正式提供；尚未实装和暂缓项目是后续方向，具体取舍仍会调整。
+下图保留 **1.1.1 时的路线图基线**，最新公开范围请以 [1.1.2 更新说明](docs/release-1.1.2.md)为准。候选表示已有独立小样或代码，不等于已在日用版启用；尚未实装和暂缓项目是后续方向。
 
 ![项目模块与路线图](media/roadmap.svg)
 
@@ -167,14 +167,14 @@ Android 端可独立连接用户配置的 API，在日常使用时，可以独�
 
 ## 下载与安装
 
-下列链接仍为已发布的 **1.1.1** 下载文件。1.1.2尚未公开发行；近期本地更新和私人手机升级包不作为这里的公开附件。
+下列链接为已公开发布的 **1.1.2**。公开包包含基础角色模板和空白个人资料；作者私人手机升级包不作为公开附件。
 
 | 平台或用途 | 下载文件 |
 | --- | --- |
-| Windows 基础程序 | [GERNZE-windows-1.1.1.zip](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.1/GERNZE-windows-1.1.1.zip) |
-| Android 基础程序 | [GERNZE-android-1.1.1.apk](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.1/GERNZE-android-1.1.1.apk) |
-| 可选 Codex 接入插件 | [GERNZE-codex-1.0.0.zip](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.1/GERNZE-codex-1.0.0.zip) |
-| 公开源码 | [GERNZE-source-1.1.1.zip](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.1/GERNZE-source-1.1.1.zip) |
+| Windows 基础程序 | [GERNZE-windows-1.1.2.zip](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.2/GERNZE-windows-1.1.2.zip) |
+| Android 基础程序 | [GERNZE-android-1.1.2.apk](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.2/GERNZE-android-1.1.2.apk) |
+| 可选 Codex 接入插件 | [GERNZE-codex-1.0.0.zip](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.2/GERNZE-codex-1.0.0.zip) |
+| 公开源码 | [GERNZE-source-1.1.2.zip](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.2/GERNZE-source-1.1.2.zip) |
 
 普通使用只需要对应平台的基础程序，其他插件可按需下载，不会在下载基础程序的时候自动一起安装。
 Windows 版解压后运行，保留同目录运行文件；Android 版按系统提示安装 APK。接入 API 对话时，在设置里填写自己的服务地址、模型与密钥。
