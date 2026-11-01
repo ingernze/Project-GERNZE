@@ -12,7 +12,7 @@ fs.writeFileSync('www/index.html',opening.replace(versionTag,'<span class="splas
 
 // Share the accepted read-only book renderer with desktop; all data stays local.
 const sharedBooks=path.resolve('../src/workbench/static');
-for(const name of ['memory-books.js','memory-books.css'])fs.copyFileSync(path.join(sharedBooks,name),path.join('www',name));
+for(const name of ['memory-books.js','memory-books.css','task-progress.css','progress-libao.png'])fs.copyFileSync(path.join(sharedBooks,name),path.join('www',name));
 fs.mkdirSync('www/assets',{recursive:true});
 for(const month of [10,11,12]){const name='cover-'+month+'.png';fs.copyFileSync(path.join(sharedBooks,'assets',name),path.join('www/assets',name));}
 const esbuild=require('esbuild');

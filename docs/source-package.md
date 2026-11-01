@@ -1,3 +1,7 @@
+> 2026-10-31现行分发状态：源码白名单为546项，原位更新的书架和手机模块仍使用已有清单路径。公开下载继续使用README中的1.1.1链接；1.1.2公开候选已按10月31日源码重建，仍未上传；它与私人code35升级包分开保存。下方带日期的文件数与候选状态均为历史记录。
+>
+> 私人人设、个人核心资料、聊天/书架数据库、发布器`.state`、配对凭据、私人安装包和本地维护笔记不属于公开源码。白名单与排除规则审计只核对明确路径及固定排除探针，不等同所有文件内容的秘密扫描，也不证明旧发行附件与当前源码一致。实际变更见[制作日志](development-log.md)，待发布范围见[1.1.2说明](release-1.1.2.md)。
+
 > 2026-10-23 上传准备：现行白名单为 438 项，包含作者确认的 README 和 13 个实际引用的展示文件；正式桌面入口为 `src/desktop_main.py`。展示图片并非完整运行素材包，模型与语音环境仍另行提供。下文较早的文件数量与路径属于历史快照。
 
 > 当前公开源码白名单425项（2026-10-22），用于1.1.1发行准备。安装包与源码验证分别记录；最新说明见 [1.1.1](release-1.1.1.md)。下文旧版本记录不作为现行完成状态。
@@ -72,3 +76,12 @@ Codex接入继续复用agent-bridge现有MCP与Skill，不另做聊天模型、�
 本轮只确认分发方案并补充说明和精确白名单；没有生成正式插件安装包，没有实测宿主安装/卸载，没有提交或发布GitHub。后续发布前检查骨架附件不包含插件文件，独立插件包可启动且卸载保留数据；最终GitHub提交由用户执行。
 
 依据：[GitHub Releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)、[独立附件链接](https://docs.github.com/en/repositories/releasing-projects-on-github/linking-to-releases)、[Codex插件打包](https://developers.openai.com/plugins/build/plugins)、[插件安装与移除命令](https://learn.chatgpt.com/docs/developer-commands)。
+
+
+## 2026-10-24 导出前双向检查
+
+源码白名单现458项。tools/audit_source.py只读核对名单、来源文件、可选快照/归档哈希，并通过临时Git规则探针检查允许项及12类私人/构建排除样本；对目标仓库只用git ls-files -z检查已跟踪路径。它不是秘密扫描，不能保证允许文本内部绝无凭据，也不自动删除、暂存或提交。完整工程不传--snapshot；任务包省略媒体时须同时提供SNAPSHOT和SOURCE_INVENTORY。
+
+先运行python tools/audit_source.py --root .，再运行python tools/export_source.py --output <新的空导出目录>，最后对生成ZIP加--export-archive再次审计。导出器在写入前拒绝重复、大小写碰撞、不规范/缺失/链接来源、已有报告或归档，生成后核对精确成员、顺序与SHA256。不要以原始目录压缩替代白名单，也不要为检查运行会提交上传的commit_allowed.ps1。
+
+Windows合成检查使用真实目录junction验证链接拒绝；当前用户无文件symlink创建权限，该类型未在Windows创建实测，POSIX夹具仍保留。本轮只生成隔离源码验证归档，未替换正式发行附件。只读桌面见闻子集属于可选宿主接入源码，不含Codex浏览/探索插件执行环境或真实账本；默认关闭，安装包未构建。

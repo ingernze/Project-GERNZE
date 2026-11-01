@@ -31,7 +31,7 @@ if any(flag in sys.argv for flag in ("--scene-settings-self-test", "--voice-entr
 
 
 class LibaoDesktopApp(app.HecatePet):
-    def __init__(self):
+    def __init__(self, *, workbench_chat_factory=None):
         self.quota_overview = None
         self._local_history = None
         self._local_read = False
@@ -53,10 +53,21 @@ class LibaoDesktopApp(app.HecatePet):
         self.credential_error = False
         super().__init__()
         self._local_enabled = bool(self.settings.get("codex_local_enabled", True))
-        self.workbench = WorkbenchHost(app.STATE_ROOT, app.ROOT, app.log,
+        workbench_dir = app.STATE_ROOT
+        agent_profile = os.environ.get('GERNZE_AGENT_PROFILE')
+        if agent_profile:
+            if workbench_chat_factory is not None or os.environ.get('GERNZE_RESEARCH_PROFILE'):
+                raise ValueError('Agent资料入口不能与其他聊天工厂或研究目录混用。')
+            from workbench.agent_memory import AgentFactory
+            workbench_chat_factory = AgentFactory(agent_profile,
+                source_config=os.environ.get('GERNZE_AGENT_SOURCE_CONFIG') or None)
+            workbench_dir = workbench_chat_factory.profile
+        self.workbench = WorkbenchHost(workbench_dir, app.ROOT, app.log,
             voice_notify=lambda event:self._enqueue_command('voice:'+event),
             behavior_call=self.activity_settings_call, modules=self.optional_modules,
-            module_notify=lambda:self._enqueue_command('packages:open'))
+            module_notify=lambda:self._enqueue_command('packages:open'),
+            research_profile=os.environ.get('GERNZE_RESEARCH_PROFILE') or None,
+            chat_factory=workbench_chat_factory)
         self.codex_activity = CodexActivityWindow(app.ROOT, app.log)
         self.quota_enabled = False if any(flag in sys.argv for flag in ("--scene-settings-self-test", "--voice-entry-self-test", "--voice-text-self-test", "--voice-module-self-test", "--blink-self-test", "--voice-self-test", "--metadata-self-test", "--style-self-test", "--offline-self-test", "--sync-self-test", "--local-quota-self-test", "--walk-self-test", "--reading-self-test", "--actions-self-test", "--random-actions-self-test", "--style2-grab-self-test", "--grab-self-test", "--head-click-self-test", "--inertia-self-test", "--benchmark")) else bool(self.settings.get("deepseek_enabled", False))
         self._read_key_state()

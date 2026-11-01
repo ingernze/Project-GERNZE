@@ -99,4 +99,63 @@ class Packages(unittest.TestCase):
         (self.resources/'module_catalog.json').unlink();legacy=OptionalModules(self.resources,self.data)
         self.assertTrue(legacy.installed('cet6'))
         with self.assertRaises(ValueError):legacy.uninstall('cet6')
+
+
+class StudyImportCompatibility(unittest.TestCase):
+    def check_layout(self,namespace,variant='normal'):
+        import subprocess
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);resources=root/'resources';resources.mkdir();folder=root/'installed/cet6';folder.mkdir(parents=True)
+            entries={}
+            namespaces=('libao_modules','hebao_modules') if variant=='ambiguous' else (namespace,)
+            for ns in namespaces:
+                for leaf in ('daily_study.py','handoff.py','prompts.py'):
+                    data=(Path(__file__).resolve().parents[1]/'libao_modules'/leaf).read_bytes()
+                    name='python/'+ns+'/'+leaf;dest=folder/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(data)
+                    entries[name]={'size':len(data),'sha256':hashlib.sha256(data).hexdigest()}
+            if variant=='incomplete':del entries['python/'+namespace+'/prompts.py']
+            catalog={'schema_version':1,'modules':{'cet6':{'version':'v1','files':entries},'voice_engine':{'version':'v1','available':False,'files':{}}}}
+            (resources/'module_catalog.json').write_text(json.dumps(catalog),encoding='utf-8')
+            manager=OptionalModules(resources,root/'data',install_root=root/'installed')
+            (folder/'.installed.json').write_text(json.dumps({'id':'cet6','version':'v1','catalog_hash':manager.catalog_hash('cet6')}),encoding='utf-8')
+            if variant=='tampered':(folder/'python'/namespace/'daily_study.py').write_text('raise AssertionError("unverified code")',encoding='utf-8')
+            if variant=='unlisted':
+                other=folder/'python/libao_modules';other.mkdir(parents=True)
+                for leaf in ('daily_study.py','handoff.py','prompts.py'):(other/leaf).write_text('raise AssertionError("unlisted code")',encoding='utf-8')
+            # A fresh interpreter and empty package path prevent the source tree or
+            # earlier tests from hiding a broken external/frozen-module import.
+            script="""
+import json,sys
+from pathlib import Path
+sys.path.insert(0,sys.argv[1])
+import libao_modules,libao_modules.registry
+from optional_modules import OptionalModules
+from workbench.bridge import Bridge
+root=Path(sys.argv[2]);ns=sys.argv[3];variant=sys.argv[4]
+libao_modules.__path__=[]
+manager=OptionalModules(root/'resources',root/'data',install_root=root/'installed')
+assert manager.installed('cet6')
+bridge=Bridge(root/'data',modules=manager)
+if variant in ('tampered','ambiguous','incomplete'):
+ try:bridge.call({'command':'daily.workspace','params':{}})
+ except ValueError:pass
+ else:raise AssertionError('Invalid package accepted')
+ assert libao_modules.__path__==[]
+else:
+ result=bridge.call({'command':'daily.workspace','params':{}})
+ assert isinstance(result,dict) and 'history' in result
+ for name in ('daily_study','handoff','prompts'):
+  actual=Path(sys.modules['libao_modules.'+name].__file__).resolve()
+  assert actual==root/'installed/cet6/python'/ns/(name+'.py'),actual
+ print(json.dumps({'workspaceLoaded':True,'namespace':ns,'unlistedIgnored':variant=='unlisted'}))
+"""
+            result=subprocess.run([sys.executable,'-B','-X','utf8','-c',script,str(Path(__file__).resolve().parents[1]),str(root),namespace,variant],capture_output=True,text=True,encoding='utf-8',timeout=20)
+            self.assertEqual(result.returncode,0,result.stderr)
+    def test_current_package_loads_actual_workspace(self):self.check_layout('libao_modules')
+    def test_legacy_package_loads_actual_workspace(self):self.check_layout('hebao_modules')
+    def test_tampered_legacy_package_rejected(self):self.check_layout('hebao_modules','tampered')
+    def test_ambiguous_verified_namespaces_rejected(self):self.check_layout('hebao_modules','ambiguous')
+    def test_unlisted_new_namespace_cannot_shadow_legacy(self):self.check_layout('hebao_modules','unlisted')
+    def test_incomplete_registered_namespace_rejected(self):self.check_layout('hebao_modules','incomplete')
+
 if __name__=='__main__':unittest.main(verbosity=2)

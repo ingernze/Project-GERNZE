@@ -140,7 +140,10 @@ def identity(directory):
 
 
 class Publisher:
-    def __init__(self,directory,apk,manifest,host,port=0,*,memory_path=None,codex_plugin_manifest=None):
+    def __init__(self,directory,apk,manifest,host,port=0,*,memory_path=None,codex_plugin_manifest=None,agent_store=None,agent_profile=None,agent_source_config=None):
+        require(not (agent_store is not None and agent_profile is not None),'agent_configuration_conflict')
+        require(agent_source_config is None or agent_profile is not None,'agent_configuration_conflict')
+        self.agent_store=agent_store;self.agent_profile=agent_profile;self.agent_source_config=agent_source_config
         self.directory=private_directory(directory);self.host=private_host(host)
         require(type(port) is int and (port==0 or 1024<=port<=65535))
         self.memory_path=Path(memory_path) if memory_path else None;self.memory_service=None
@@ -221,6 +224,27 @@ class Publisher:
                      'pairingSecret':secret,'expiresAt':int(time.time()*1000)+seconds*1000}
             atomic(self.directory/'pairing.json',canonical(payload))
             return payload
+
+    def agent_backend(self):
+        if self.agent_store is not None:return self.agent_store
+        require(self.agent_profile is not None,'agent_cache_unavailable')
+        from agent_service import attach
+        return attach(self.agent_profile,self.agent_source_config)
+
+    def agent_info(self,pair_id):
+        from agent_service import PendingSnapshot,FORMAT
+        pub=PendingSnapshot(self.agent_backend(),self.server_id,pair_id)
+        return {'serverId':self.server_id,'scope_id':pub.scope,'capability':FORMAT,'readOnly':True,'approved':False}
+
+    def agent_snapshot(self,pair_id,token,body):
+        with self.lock:
+            require(self.authorized(pair_id,token),'authentication_failed')
+            info=self.agent_info(pair_id)
+            require(type(body) is dict and set(body)=={'capability','scope_id'} and body['capability']==info['capability'] and body['scope_id']==info['scope_id'],'agent_capability_mismatch')
+            from agent_service import PendingSnapshot
+            result=PendingSnapshot(self.agent_backend(),self.server_id,pair_id).export()
+            require(self.authorized(pair_id,token),'authentication_failed')
+            return result
 
     def memories(self):
         require(self.memory_path is not None,'memory_unavailable')
@@ -340,6 +364,11 @@ class Handler(BaseHTTPRequestHandler):
             length=self.headers.get('Content-Length','');require(re.fullmatch(r'0|[1-9][0-9]{0,7}',length) is not None)
             memory_route=self.path in ('/v1/raw/exchange','/v1/memory/exchange','/v1/memory/decide','/v1/layers/exchange','/v1/layers/decide')
             codex_route=self.path in ('/v1/codex/subscription','/v1/codex/events','/v1/codex/ack')
+            agent_route=self.path=='/v1/agent-cache/snapshot'
+            agent_peer=None
+            if agent_route:
+                agent_peer=self.credentials()
+                require(self.headers.get('Range') is None,'range_not_supported')
             codex_peer=None
             if memory_route:pair_id,_=self.credentials()
             if codex_route:codex_peer=AuthenticatedPeer(self.credentials()[0])
@@ -348,6 +377,11 @@ class Handler(BaseHTTPRequestHandler):
             body=self.rfile.read(n);require(len(body)==n)
             body=parse(body,limit)
             if codex_route:self.reply(200,self.server.publisher.codex_tasks().dispatch(self.path,body,codex_peer))
+            elif agent_route:
+                p=self.server.publisher
+                result=p.agent_snapshot(*agent_peer,body)
+                require(p.authorized(*agent_peer),'authentication_failed')
+                self.reply(200,result)
             elif self.path=='/v1/pair':self.reply(200,self.server.publisher.pair(body))
             elif self.path=='/v1/unpair':
                 pair_id,_=self.credentials();require(body=={})
@@ -358,20 +392,29 @@ class Handler(BaseHTTPRequestHandler):
                 if self.path=='/v1/raw/exchange':
                     require(p.memory_path is not None,'memory_unavailable')
                     from layer_service import PhoneArchive
-                    result=PhoneArchive(p.memory_path.with_name('chat-sessions.sqlite3')).exchange(device,body);result['serverId']=p.server_id
+                    journal=p.memory_path.with_name('chat-sessions.sqlite3')
+                    if type(body) is dict and body.get('format')=='gernze-phone-research-raw-v1':
+                        info=p.layers().info()
+                        require(info.get('phoneResearchRaw')=='gernze-phone-research-raw-v1','updated_workbench_required')
+                        from workbench.phone_research_archive import PhoneResearchArchive
+                        result=PhoneResearchArchive(journal,p.server_id,info['scope_id']).exchange(device,body)
+                    else:result=PhoneArchive(journal).exchange(device,body)
+                    result['serverId']=p.server_id
                 else:result=p.layers().exchange(body,peer_device=device)
+                if self.path=='/v1/layers/exchange' and type(body) is dict and 'bookshelf' in body:self.credentials()
                 self.reply(200,result)
             elif self.path=='/v1/layers/decide':self.reply(200,self.server.publisher.layers().decide(body))
             elif self.path=='/v1/memory/exchange':self.reply(200,self.server.publisher.memories().exchange(body))
             elif self.path=='/v1/memory/decide':self.reply(200,self.server.publisher.memories().decide(body))
             else:self.reply(404,{'code':'invalid_input'})
         except (Error,EventError) as e:self.reply(401 if e.code.startswith(('authentication','pairing_')) else 400,{'code':e.code})
-        except (ValueError,OSError):self.reply(409,{'code':'memory_failed'})
+        except (ValueError,OSError,sqlite3.Error):self.reply(409,{'code':'memory_failed'})
     def do_GET(self):
         try:
             self.check_headers();pair_id,token=self.credentials()
             p=self.server.publisher
             if self.headers.get('Range') is not None:self.reply(416,{'code':'range_not_supported'});return
+            if self.path=='/v1/agent-cache/info':self.reply(200,p.agent_info(pair_id));return
             if self.path=='/v1/codex/info':self.reply(200,p.codex_tasks().dispatch(self.path,None,AuthenticatedPeer(pair_id)));return
             if self.path=='/v1/release':self.reply(200,p.release);return
             if self.path=='/v1/layers/info':self.reply(200,p.layers().info());return
@@ -388,12 +431,14 @@ class Handler(BaseHTTPRequestHandler):
                     if p.stopping.is_set() or not p.authorized(pair_id,token) or p.file_signature(os.fstat(f.fileno()))!=p.signature:return
                     self.wfile.write(block)
         except (Error,EventError) as e:self.reply(401 if e.code=='authentication_failed' else 409,{'code':e.code})
-        except (ValueError,OSError):self.reply(409,{'code':'memory_failed'})
+        except (ValueError,OSError,sqlite3.Error):self.reply(409,{'code':'memory_failed'})
 
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--codex-plugin-manifest',type=Path)
+    parser.add_argument('--agent-profile',type=Path)
+    parser.add_argument('--agent-source-config',type=Path)
     parser.add_argument('--host',required=True);parser.add_argument('--port',type=int,default=53319)
     parser.add_argument('--private-dir',required=True);parser.add_argument('--apk',required=True)
     parser.add_argument('--release',required=True,help='strict ReleaseManifest JSON, not an installer sidecar')
@@ -401,7 +446,7 @@ def main():
     def stop_signal(*_):raise KeyboardInterrupt
     signal.signal(signal.SIGTERM,stop_signal)
     try:
-        publisher=Publisher(args.private_dir,args.apk,parse(Path(args.release).read_bytes()),args.host,args.port,codex_plugin_manifest=args.codex_plugin_manifest).start()
+        publisher=Publisher(args.private_dir,args.apk,parse(Path(args.release).read_bytes()),args.host,args.port,codex_plugin_manifest=args.codex_plugin_manifest,agent_profile=args.agent_profile,agent_source_config=args.agent_source_config).start()
         publisher.issue_invitation()
         print('已启动单包 HTTPS 发布。配对载荷保存在所选私有目录的 pairing.json，180秒有效。')
         print('本机命令：pair 刷新载荷；devices 查看授权编号；revoke <pairingId> 撤销；quit 停止。不要分享载荷或目录。')

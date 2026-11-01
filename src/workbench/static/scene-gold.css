@@ -154,3 +154,36 @@
 :is(.scene-shelf-art,.desktop-books-overlay) .mb-stage-placeholder .mb-status{position:absolute;z-index:2;left:20%;right:20%;top:50%;margin:0;padding:10px;text-align:center;color:#52697a;text-shadow:none;font-size:16px;line-height:1.8;overflow-wrap:anywhere}
 
 :is(.scene-shelf-art,.desktop-books-overlay) .mb-stage-placeholder .mb-status p{color:inherit;text-shadow:none}
+
+/* Read-only categories share the existing bookshelf overlay and artwork. */
+.research-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;color:var(--hebao-ink,#f2e9d6)}
+.research-heading h2{font-size:22px;margin:0;font-weight:500;letter-spacing:.12em}
+.research-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:8px 12px;flex:none}
+.research-categories .scene-button{white-space:normal;min-height:46px;line-height:1.5}
+.research-categories .scene-button[aria-pressed=true]{background:var(--hebao-selection,#344e63);border-color:#c8ae77;color:var(--hebao-selection-ink,#f2e9d6)}
+.research-categories .research-archive-button{grid-column:1/-1;min-height:36px;background:transparent}
+.research-panel{flex:1;min-height:0;overflow-y:auto;padding:12px;border-radius:14px;background:var(--hebao-surface,#263d50);color:var(--hebao-ink,#f2e9d6);border:1px solid var(--hebao-card-line,#c8ae773d)}
+.research-rows{display:grid;gap:12px}.research-card{margin:0;padding:14px;border:1px solid var(--hebao-line,#c8ae7726);border-radius:12px}
+.research-body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.9;margin-top:14px}
+.research-panel>.scene-status{font-size:14px}.research-panel[hidden],.desktop-books-host[hidden]{display:none!important}
+@media(max-width:500px){.research-categories{gap:6px;padding:6px}.research-categories .scene-button{font-size:13px;padding:8px}.research-panel{padding:10px}.research-heading{padding:6px}.research-heading h2{font-size:18px}}
+
+
+/* Monthly artwork remains the entrance; categories are a secondary disclosure. */
+.desktop-books-shell .research-heading{flex:none;min-width:0}
+.desktop-books-shell .research-heading h2{flex:1;min-width:0;white-space:nowrap;font-size:20px}
+.desktop-books-shell .research-category-toggle{max-width:52%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.desktop-books-shell .research-heading>.scene-button{flex-shrink:0}
+.desktop-books-shell .research-categories{position:absolute;left:12px;right:12px;top:60px;z-index:10;max-height:calc(100% - 72px);overflow-y:auto;padding:12px;background:var(--hebao-surface,#263d50);border:1px solid var(--hebao-card-line,#c8ae773d);border-radius:12px;box-shadow:0 12px 30px #07192980}
+.desktop-books-shell .research-categories[hidden]{display:none!important}
+.desktop-books-shell[data-category=archive] .mb-books[data-view=shelf] .mb-header{display:none}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-shelf-scroll{justify-content:flex-start}
+.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-stage{width:520px;max-width:none;zoom:var(--memory-shelf-scale,1)}
+@media(max-height:760px){.desktop-books-focus .desktop-books-shell .mb-books[data-view=shelf] .mb-stage{zoom:min(.8,var(--memory-shelf-scale,1))}}
+@media(max-width:500px){.desktop-books-shell .research-heading{gap:8px}.desktop-books-shell .research-heading h2{font-size:17px}.desktop-books-shell .research-heading>.scene-button{padding-inline:10px}.desktop-books-shell .research-category-toggle{max-width:46%}}
+
+
+/* Archive failures remain visible in the bookshelf, including standalone chat. */
+.desktop-books-shell .desktop-archive-notice{flex:none;padding:8px 12px;color:var(--hebao-ink,#f2e9d6);font-size:13px;line-height:1.7}
+.desktop-books-shell .desktop-archive-notice[hidden]{display:none!important}
+.desktop-books-shell .desktop-archive-notice .scene-button{margin-left:8px}

@@ -137,6 +137,16 @@ public final class LibaoChatPlugin extends Plugin {
     @PluginMethod public void cancel(PluginCall call){Task t=active.get();if(t!=null&&t.id.equals(call.getString("id","")))t.stop();JSObject r=new JSObject();r.put("cancelled",true);call.resolve(r);}
     @PluginMethod public void request(PluginCall call){
         String purpose=call.getString("purpose","chat");if(!purpose.equals("chat")&&!purpose.equals("summary")){call.reject("请求类型无效。","invalid_request");return;}
+        // Missing field: legacy chat=700 / summary=500. Present values must be
+        // integer JSON numbers; never coerce a boolean/string or silently default.
+        Object allowance=call.getData().opt("maxTokens");
+        boolean supplied=call.getData().has("maxTokens");
+        if(supplied&&(!(allowance instanceof Integer||allowance instanceof Long)||
+            (purpose.equals("summary")?((Number)allowance).longValue()!=500:
+             (((Number)allowance).longValue()!=700&&((Number)allowance).longValue()!=1800)))){
+            call.reject("输出预算无效；聊天只接受700或1800，摘要只接受500。","invalid_request");return;
+        }
+        final int maxTokens=supplied?((Number)allowance).intValue():(purpose.equals("summary")?500:700);
         String id=call.getString("id","");if(!id.matches("[A-Za-z0-9_-]{1,100}")){call.reject("请求编号无效。","invalid_request");return;}
         Task task=new Task(id);if(!active.compareAndSet(null,task)){call.reject("上一轮尚未结束，请稍等。","busy");return;}
         io.execute(()->{
@@ -151,7 +161,7 @@ public final class LibaoChatPlugin extends Plugin {
                     if(m.length()!=2||!role.equals(i==0?"system":i%2==1?"user":"assistant")||!(m.get("content") instanceof String)||m.getString("content").isEmpty())throw new IllegalArgumentException();
                 }
                 if(!messages.getJSONObject(messages.length()-1).getString("role").equals("user"))throw new IllegalArgumentException();
-                JSONObject payload=new JSONObject().put("model",config.getString("model")).put("messages",messages).put("stream",false).put("max_tokens",purpose.equals("summary")?500:700);
+                JSONObject payload=new JSONObject().put("model",config.getString("model")).put("messages",messages).put("stream",false).put("max_tokens",maxTokens);
                 // This optional official-provider switch matches the desktop adapter; other APIs receive standard fields only.
                 if("api.deepseek.com".equals(new URI(config.getString("endpoint")).getHost()))payload.put("thinking",new JSONObject().put("type","disabled"));
                 if(task.cancelled)throw new InterruptedException();

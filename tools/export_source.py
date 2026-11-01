@@ -21,23 +21,29 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--output',type=Path,required=True);args=parser.parse_args()
     root=Path(__file__).resolve().parents[1];out=args.output.resolve()
     if out==root or root.is_relative_to(out):raise ValueError('Output must not contain the project')
-    out.mkdir(parents=True,exist_ok=True)
-    if any(out.iterdir()):raise ValueError('Output directory must be empty')
-    names=json.loads((root/'source-files.json').read_text(encoding='utf8'))['files'];rows=[]
-    for name in names:
-        source=checked_source(root,name)
+    archive=out.with_suffix('.zip')
+    report=out.parent/(out.name+'_files.json')
+    if archive.exists() or report.exists():raise ValueError('Archive or report exists')
+    if out.exists() and (not out.is_dir() or any(out.iterdir())):
+        raise ValueError('Output directory must be empty')
+    names=json.loads((root/'source-files.json').read_text(encoding='utf8'))['files']
+    if not isinstance(names,list) or not all(isinstance(n,str) for n in names) or len(names)!=len(set(names)) or len(names)!=len(set(n.casefold() for n in names)):
+        raise ValueError('Duplicate or invalid source names')
+    sources=[(name,checked_source(root,name)) for name in names]
+    out.mkdir(parents=True,exist_ok=True);rows=[]
+    for name,source in sources:
         raw=source.read_bytes();target=out/name
         if not target.resolve().is_relative_to(out):raise ValueError('Output path outside export')
         target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
         if target.read_bytes()!=raw:raise ValueError('Export mismatch: '+name)
         rows.append({'file':name,'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()})
-    report=out.parent/(out.name+'_files.json');report.write_text(json.dumps({'files':rows,'bytes':sum(r['bytes'] for r in rows)},ensure_ascii=False,indent=2),encoding='utf8')
-    archive=out.with_suffix('.zip')
-    if archive.exists():raise ValueError('Archive exists')
+    report.write_text(json.dumps({'files':rows,'bytes':sum(r['bytes'] for r in rows)},ensure_ascii=False,indent=2),encoding='utf8')
     with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as z:
         for row in rows:z.write(out/row['file'],row['file'])
     with zipfile.ZipFile(archive) as z:
         if z.testzip() is not None:raise ValueError('ZIP damaged')
+        if z.namelist()!=names or any(hashlib.sha256(z.read(row['file'])).hexdigest()!=row['sha256'] for row in rows):
+            raise ValueError('ZIP content mismatch')
     print(json.dumps({'files':len(rows),'source_bytes':sum(r['bytes'] for r in rows),'zip_bytes':archive.stat().st_size}))
 
 if __name__=='__main__':main()

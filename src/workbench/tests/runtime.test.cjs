@@ -45,3 +45,30 @@ test('small screens use floating panels without consuming the workspace track',(
   assert.equal(wide.overlay,false);assert.equal(wide.detailTrack,344);assert.equal(wide.navTrack,256);
   assert.equal(resolveLayout(1280,{...prefs,collapsed:true}).navTrack,64);
 });
+
+for (const id of ['settings','scene']) {
+  test(id+' declares every command used by the embedded memory component',async()=>{
+    const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+    const window={};
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/modules.js'),'utf8'),{window});
+    const registry=new Registry();window.HebaoModules.register(registry);
+    const source=fs.readFileSync(path.join(__dirname,'../static/scene-memory.js'),'utf8');
+    const commands=[...new Set([...source.matchAll(/\b(?:call|mutate)\('([^']+)'/g)].map(m=>m[1]))];
+    const forwarded=[];
+    const call=clientFor(registry.modules.get(id),async command=>{forwarded.push(command);return {ok:true};});
+    for(const command of commands)await call(command,{});
+    assert.deepEqual(forwarded,commands);
+    await assert.rejects(call('shell.exec'),/没有申请/);
+  });
+}
+
+
+test('settings declares every command used by the connection manager',async()=>{
+  const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),window={};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/modules.js'),'utf8'),{window});
+  const registry=new Registry();window.HebaoModules.register(registry);
+  const code=fs.readFileSync(path.join(__dirname,'../static/scene-chat.js'),'utf8').split('function mountSettings(')[1];
+  const commands=[...new Set([...code.matchAll(/call\('([^']+)'/g)].map(m=>m[1]))];
+  const call=clientFor(registry.modules.get('settings'),async()=>({}));
+  for(const command of commands)await call(command,{});
+});

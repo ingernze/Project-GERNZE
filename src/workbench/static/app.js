@@ -47,7 +47,7 @@ const details=(title,text)=>{
   close.addEventListener('click',()=>frame.closeDetails());head.append(close);panel.append(head,h('div','detail-text',text));frame.details(panel);
 };
 const header=h('header','workbench-header');const crumb=h('span','breadcrumb','工作台 / 首页');
-const status=h('span','top-status');status.append(h('span','status-dot'),h('span','',preview?'独立预览':'本地工作台'));
+const status=h('span','top-status');status.append(h('span','status-dot'),h('span','',preview?'独立预览':document.documentElement.dataset.researchPreview==='true'?'研究测试版 · 独立资料':'本地工作台'));
 header.append(crumb,status);const pageSlot=h('div','page-slot');frame.main.append(header,pageSlot);
 const refresh=async()=>{state=await transport('state.summary');if(!disposed)renderRecent();return state;};
 const host=new window.HebaoRuntime.PanelHost(registry,pageSlot,{registry,transport,preview,drafts,refresh,state:()=>state,notify,details,closeDetails:()=>frame.closeDetails(),navigate:(id,payload)=>navigate(id,payload)},error=>console.error(error));
@@ -130,7 +130,7 @@ function navigate(id,payload) {
   if(disposed)return;
   const entry=registry.modules.get(id);if(!entry)return;
   activeId=id;if(entry.navigationGroup==='learning'){learningExpanded=true;updateLearning();}
-  crumb.textContent='工作台 / '+(entry.navigationGroup==='learning'?'学习 / ':'')+entry.title;document.title=entry.title+' · 莉宝';
+  crumb.textContent='工作台 / '+(entry.navigationGroup==='learning'?'学习 / ':'')+entry.title;document.title=entry.title+' · 莉宝'+(document.documentElement.dataset.researchPreview==='true'?' · 研究测试版':'');
   updateSelection();
   host.open(id,payload);
 }
@@ -140,5 +140,5 @@ scope.listen(window,'pagehide',()=> {
   if(!preview&&token)fetch('/api/call',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({command:'session.leave',params:{}}),keepalive:true}).catch(()=>{});
   dispose();
 });
-refresh().then(()=>navigate('study')).catch(error=>{navigate('home');notify(error.message);});
+refresh().then(()=>navigate('scene')).catch(error=>{navigate('home');notify(error.message);});
 })();

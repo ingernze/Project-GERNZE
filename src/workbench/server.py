@@ -18,7 +18,7 @@ import time
 from libao_modules.security import strict_json
 from activity_timing import validate_preferences
 from .bridge import Bridge, CONTRACTS, validate_call
-from .companion_chat import CompanionChat
+from .encounter_composition import create_desktop_chat
 from .companion_memory import CompanionMemory
 from .memory_archive import MemoryArchive
 from .owner_memory import owner_memory
@@ -32,6 +32,9 @@ ASSETS = {
     '/': ('index.html', 'text/html; charset=utf-8'),
     '/index.html': ('index.html', 'text/html; charset=utf-8'),
     '/style.css': ('style.css', 'text/css; charset=utf-8'),
+    '/task-progress.js': ('task-progress.js', 'text/javascript; charset=utf-8'),
+    '/task-progress.css': ('task-progress.css', 'text/css; charset=utf-8'),
+    '/progress-libao.png': ('progress-libao.png', 'image/png'),
     '/mark.svg': ('mark.svg', 'image/svg+xml'),
     '/arrival.css': ('arrival.css', 'text/css; charset=utf-8'),
     '/arrival_v23.webm': ('arrival_v23.webm', 'video/webm'),
@@ -235,6 +238,10 @@ CONTROL = {'mobile_updates.open': (set(),set()), 'chat.memory.list': (set(),set(
            **{name: (set(),set()) for name in ('voice.scene_sleep','voice.scene_wake','voice.scene_stop')},
            **{name: (set(), set()) for name in ('voice.available','voice.open','voice.fixed','voice.text','voice.api')}}
 CONTROL.update({
+    'chat.connections.list': (set(),set()),
+    'chat.connections.save': ({'name','settings'},{'connection_id'}),
+    'chat.connections.select': ({'connection_id'},set()),
+    'chat.connections.remove': ({'connection_id'},set()),
     'chat.layers.auto_review.status': (set(),set()),
     'chat.layers.auto_review.configure': ({'enabled'},set()),
     'chat.layers.auto_review.run': (set(),set()),
@@ -243,6 +250,13 @@ CONTROL.update({
     'chat.books.months': (set(),set()), 'chat.books.days': ({'month'},set()),
     'chat.books.day': ({'day'},set()), 'chat.books.status': (set(),set()),
     'chat.books.undated': (set(),set()), 'chat.layers.get': (set(),set()),
+    'chat.study.status': (set(),set()),
+    'chat.study.reply': ({'text','request_id','materials'},set()),
+    'chat.research.status': (set(),set()),
+    'chat.research.reply': ({'text','request_id','materials'},set()),
+    'chat.research.groups': (set(),set()),
+    'chat.research.list': ({'category'},{'after'}),
+    'chat.research.read': ({'category','id','revision','purpose'},set()),
     'chat.layers.settings': ({'settings'},set()), 'chat.layers.decide': ({'decisions'},set()),
     'chat.layers.correct': ({'key','revision','text'},set()),
     'chat.layers.withdraw': ({'key','revision'},set()),
@@ -256,7 +270,9 @@ CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' 
 
 
 class WorkbenchServer(HTTPServer):
-    def __init__(self, data_dir, *, voice_notify=None, entrance=None, behavior_call=None, modules=None, module_notify=None):
+    def __init__(self, data_dir, *, voice_notify=None, entrance=None, behavior_call=None, modules=None, module_notify=None, encounter_enabled=False, encounter_directory=None, research_enabled=False, chat_keys=None, start_auto_review=True, chat_factory=None):
+        if chat_factory is not None and not callable(chat_factory):
+            raise ValueError("工作台聊天入口必须是可信的可调用工厂。")
         self.behavior_call = behavior_call
         self.desktop_voice_available = voice_notify is not None
         self.voice_notify = voice_notify or (lambda event: None)
@@ -264,8 +280,22 @@ class WorkbenchServer(HTTPServer):
         self.bridge = Bridge(data_dir, modules=modules)
         self.module_notify = module_notify
         self.memories = owner_memory(Path(data_dir) / "workbench" / "companion-memory.sqlite3",workbench=True)
-        self.chat = CompanionChat(Path(data_dir) / "workbench" / "chat.json", memories=self.memories)
+        chat_options = {'keys': chat_keys} if chat_keys is not None else {}
+        self.chat = (create_desktop_chat if chat_factory is None else chat_factory)(Path(data_dir) / "workbench" / "chat.json", memories=self.memories, encounter_enabled=encounter_enabled, encounter_directory=encounter_directory, research_enabled=research_enabled, **chat_options)
+        from .study_chat import StudyChat, ResearchChat
+        self.study_chat = StudyChat(self.chat)
+        self.research_chat = ResearchChat(self.chat)
         self.archive = MemoryArchive(self.chat,legacy=self.memories)
+        # A local owner receipt enables browsing/import only. It never enables
+        # research chat, migrates the journal, or grants L2/model permissions.
+        receipt = Path(data_dir) / 'bookshelf-receipt.json'
+        if not research_enabled and chat_factory is None and receipt.is_file():
+            from uuid import uuid5, NAMESPACE_URL
+            from .research_shelf_sync import ResearchShelfSync
+            shelf_id = str(uuid5(NAMESPACE_URL, 'gernze-daily-bookshelf:' + str(Path(data_dir).resolve())))
+            self.research_shelf_sync = ResearchShelfSync(data_dir, shelf_id, self.chat.store.path)
+            self.research_shelf_sync.refresh()
+
         self.chat.context.summarizer=adapter_for_chat(self.chat)
         self.chat.context.timeout=18.0
         self.chat.context.summary_interval_days=7
@@ -286,7 +316,8 @@ class WorkbenchServer(HTTPServer):
         self.authority = '127.0.0.1:' + str(self.server_port)
         self.origin = 'http://' + self.authority
         self.memory_reviewer = DesktopMemoryReview(self.chat)
-        self.memory_reviewer.start()
+        if start_auto_review:
+            self.memory_reviewer.start()
 
     @property
     def launch_url(self):
@@ -457,6 +488,9 @@ class Handler(BaseHTTPRequestHandler):
         if asset[0] == 'index.html':
             theme = self.server.bridge.appearance_theme()
             body = body.replace(b'data-theme="dark"', ('data-theme="' + theme + '"').encode('ascii'), 1)
+            if getattr(self.server, 'research_preview', False):
+                body = body.replace(b'<html ', b'<html data-research-preview="true" ', 1)
+                body = body.replace('<title>莉宝 · 工作台</title>'.encode(), '<title>莉宝 · 研究测试版</title>'.encode(), 1)
         self.respond(200, body, asset[1])
 
     def do_HEAD(self):
@@ -541,6 +575,20 @@ class Handler(BaseHTTPRequestHandler):
             elif command == 'chat.books.day': result = self.server.archive.day(_params['day'])
             elif command == 'chat.books.status': result = self.server.archive.status()
             elif command == 'chat.books.undated': result = self.server.archive.undated()
+            elif command == 'chat.study.status': result = self.server.study_chat.status()
+            elif command == 'chat.study.reply': result = self.server.study_chat.reply(**_params)
+            elif command == 'chat.research.status': result = self.server.research_chat.status()
+            elif command == 'chat.research.reply': result = self.server.research_chat.reply(**_params)
+            elif command.startswith('chat.research.'):
+                from .research_books import ResearchBooks
+                viewer = ResearchBooks(self.server.chat.store)
+                if command == 'chat.research.groups':
+                    sync=getattr(self.server,'research_shelf_sync',None)
+                    status=sync.refresh() if sync else None
+                    result=viewer.groups()
+                    if status is not None:result['shelfSync']=status
+                elif command == 'chat.research.list': result = viewer.entries(**_params)
+                else: result = viewer.read(**_params)
             elif command == 'chat.layers.get': result = self.server.chat.layers.snapshot()
             elif command == 'chat.layers.auto_review.status': result = self.server.memory_reviewer.status()
             elif command == 'chat.layers.auto_review.configure': result = self.server.memory_reviewer.configure(_params['enabled'])
@@ -563,6 +611,10 @@ class Handler(BaseHTTPRequestHandler):
                 with self.server.chat.guard:
                     self.server.chat.cancel()
                     result = self.server.chat.layers.configure(_params['settings'])
+            elif command == 'chat.connections.list': result = self.server.chat.list_connections()
+            elif command == 'chat.connections.save': result = self.server.chat.save_connection(**_params)
+            elif command == 'chat.connections.select': result = self.server.chat.select_connection(**_params)
+            elif command == 'chat.connections.remove': result = self.server.chat.remove_connection(**_params)
             elif command == 'chat.config.get': result = self.server.chat.config()
             elif command == 'chat.config.set': result = self.server.chat.configure(_params['settings'])
             elif command == 'chat.key.delete': result = self.server.chat.delete_key()
@@ -575,6 +627,8 @@ class Handler(BaseHTTPRequestHandler):
                     result={'available':False}
                 else:result=self.server.behavior_call(command,_params)
             elif command == 'mobile_updates.open':
+                if getattr(self.server, 'research_preview', False):
+                    raise ValueError('研究测试版暂不连接手机更新，请从原版工作台打开。')
                 from mobile_update_launcher import open_publisher
                 result = open_publisher(self.server.bridge.appearance_path.parent.parent)
             elif command == 'modules.open':

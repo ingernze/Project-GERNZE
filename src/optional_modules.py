@@ -70,7 +70,13 @@ class OptionalModules:
             for name, info in self.catalog['modules']['cet6']['files'].items():
                 if digest(folder / name) != info['sha256']: raise ValueError('学习模块文件已变化，请重新安装。')
             import libao_modules
-            path = str(folder / 'python' / 'libao_modules')
+            required=('daily_study.py','handoff.py','prompts.py')
+            registered=self.catalog['modules']['cet6']['files']
+            namespaces=[name for name in ('libao_modules','hebao_modules')
+                        if all('python/'+name+'/'+leaf in registered for leaf in required)]
+            if len(namespaces)!=1:
+                raise ValueError('学习模块目录不兼容，请重新安装配套模块；原有记录仍然保留。')
+            path = str(folder / 'python' / namespaces[0])
             if path not in libao_modules.__path__: libao_modules.__path__.append(path)
             importlib.invalidate_caches()
 

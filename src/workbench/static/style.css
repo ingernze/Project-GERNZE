@@ -404,3 +404,6 @@ input[type='radio'], input[type='checkbox'] { accent-color: var(--hebao-accent);
 .scene-memory button{padding:8px 12px;border-radius:8px;background:var(--hebao-tint);border:1px solid var(--hebao-control-line);color:var(--hebao-ink);cursor:pointer}
 .scene-memory [hidden]{display:none}.scene-memory button:disabled{opacity:.5;cursor:default}
 @media(max-width:640px){.scene-memory form{grid-template-columns:1fr}}
+
+/* Version stays in the settings seat while its content scrolls. */
+.settings-version{position:absolute;right:18px;bottom:10px;z-index:2;padding:2px 7px;font-size:11px;line-height:1.5;color:var(--hebao-muted);background:var(--hebao-bg);border-radius:4px;pointer-events:none}

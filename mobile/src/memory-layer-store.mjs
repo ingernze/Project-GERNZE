@@ -1,9 +1,11 @@
+import {createResearchCache} from './research-cache.mjs';
 import {createLayerSync} from './layer-sync-core.mjs';
 import {canonical} from './memory-records.mjs';
 import {layersPrompt,selectLayerEntries,summaryEntry,reviewDue} from './memory-layers.mjs';
 // Distinct capabilities/stores, one database transaction for L2/L3 and sync metadata.
 // L1 remains external and read-only. L4 remains in the independent chat journal.
-export function createLayeredMemory({core,indexedDB=globalThis.indexedDB,namespace='hebao-layers-v1',now=()=>new Date().toISOString()}={}){
+export function createLayeredMemory({core,indexedDB=globalThis.indexedDB,namespace='hebao-layers-v1',now=()=>new Date().toISOString(),researchCache=null}={}){
+ const research=researchCache||createResearchCache({indexedDB,name:namespace+'-research-cache'});
  const fixed=structuredClone(core);layersPrompt({core:fixed});let connection,ready,serial=Promise.resolve();
  const gate=fn=>{const p=serial.then(fn,fn);serial=p.catch(()=>{});return p;};
  const receiptKey=row=>'review:'+row.key+':'+row.revision;
@@ -92,5 +94,5 @@ export function createLayeredMemory({core,indexedDB=globalThis.indexedDB,namespa
    t.objectStore('meta').put(state,'layerSyncState');
   })
  });
- return Object.freeze({chat,review,sync,async close(){await ready?.catch(()=>{});connection?.close();connection=null;ready=null;}});
+ return Object.freeze({chat,review,sync,research,async close(){await research.close();await ready?.catch(()=>{});connection?.close();connection=null;ready=null;}});
 }

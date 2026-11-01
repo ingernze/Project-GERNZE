@@ -615,6 +615,9 @@ function sceneSettings(section,ctx){
 
 async function settings(rootEl,ctx) {
   const content=page(rootEl,'工作台设置','保持简单，安静运行。');
+  const version=document.querySelector('meta[name="application-version"]')?.content;
+  const versionLabel=h('small','settings-version',version?'v'+version:'版本未知');
+  versionLabel.setAttribute('aria-label','当前版本 '+(version||'未知'));rootEl.append(versionLabel);
   const appearance=h('section','surface');appearance.append(h('h2','','外观主题'));
   const row=h('div','theme-setting-row'),info=h('div','theme-setting-info');
   const status=h('p','theme-setting-status');status.id='workbench-theme-status';status.setAttribute('role','status');
@@ -661,7 +664,7 @@ async function settings(rootEl,ctx) {
 function register(registry) {
   const entries=[
     ['home','首页','home',home,['lesson.import','modules.open'],0],
-    ['scene','人物场景','moon',(el,ctx)=>sceneView(el,ctx,'room'),['chat.config.get','chat.config.set','chat.key.delete','chat.reply','chat.cancel','chat.history','chat.memory.list','chat.books.months','chat.books.days','chat.books.day','chat.books.undated','chat.books.status','chat.layers.get','chat.layers.decide','chat.layers.correct','chat.layers.withdraw','chat.layers.settings','behavior.get','voice.scene_sleep','voice.scene_wake','voice.scene_stop'],5],
+    ['scene','人物场景','moon',(el,ctx)=>sceneView(el,ctx,'room'),['chat.config.get','chat.config.set','chat.key.delete','chat.connections.list','chat.connections.save','chat.connections.select','chat.connections.remove','chat.reply','chat.study.status','chat.study.reply','chat.research.status','chat.research.reply','chat.cancel','chat.history','chat.memory.list','chat.books.months','chat.books.days','chat.books.day','chat.books.undated','chat.books.status','chat.research.groups','chat.research.list','chat.research.read','chat.layers.get','chat.layers.decide','chat.layers.correct','chat.layers.withdraw','chat.layers.settings','chat.layers.conflicts','chat.layers.resolve_conflict','chat.layers.phone_source','chat.layers.auto_review.status','chat.layers.auto_review.configure','chat.layers.auto_review.run','behavior.get','voice.scene_sleep','voice.scene_wake','voice.scene_stop'],5],
     ['study','六级学习','book',study,['daily.workspace','daily.prompt','daily.save','modules.open'],10,'learning'],
     ['progress','学习进度','chart',progress,['study.history','modules.open'],20,'learning'],
     ['memory','项目记录','note',memory,['memory.list'],30],
@@ -669,7 +672,7 @@ function register(registry) {
     ['backup','备份与资料','box',backup,['backup.export'],50],
     ['voice','声音','audio',voice,['voice.available','voice.fixed','voice.text','voice.api','modules.open'],60],
     ['extensions','模块中心','grid',extensions,['modules.open'],90],
-    ['settings','设置','settings',settings,['chat.config.get','chat.config.set','chat.key.delete','appearance.set','behavior.get','behavior.set','mobile_updates.open','chat.memory.list','chat.books.months','chat.books.days','chat.books.day','chat.books.undated','chat.books.status','chat.layers.get','chat.layers.decide','chat.layers.correct','chat.layers.withdraw','chat.layers.settings','chat.cancel'],100],
+    ['settings','设置','settings',settings,['chat.config.get','chat.config.set','chat.key.delete','chat.connections.list','chat.connections.save','chat.connections.select','chat.connections.remove','appearance.set','behavior.get','behavior.set','mobile_updates.open','chat.memory.list','chat.books.months','chat.books.days','chat.books.day','chat.books.undated','chat.books.status','chat.research.groups','chat.research.list','chat.research.read','chat.layers.get','chat.layers.decide','chat.layers.correct','chat.layers.withdraw','chat.layers.settings','chat.layers.conflicts','chat.layers.resolve_conflict','chat.layers.phone_source','chat.layers.auto_review.status','chat.layers.auto_review.configure','chat.layers.auto_review.run','chat.cancel'],100],
   ];
   return entries.map(([id,title,name,mount,commands,order,navigationGroup])=>registry.register({apiVersion:1,id,title,icon:name,mount,commands,order,navigationGroup,description:id==='voice'?'文字转语音与声音专用 API；固定台词另属骨架。':undefined}));
 }

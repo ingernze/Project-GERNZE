@@ -1,3 +1,4 @@
+"""Legacy note exchange compatibility; active chat consumes approved layers only."""
 from contextlib import closing
 import io
 import json
@@ -18,6 +19,7 @@ from companion_chat import CompanionChat
 from context_manager import ContextManager
 from persistent_memory import PersistentMemory
 from chat_sync import ChatMemorySync
+from layer_fixtures import approved
 import memory_merge as mm
 
 
@@ -197,11 +199,20 @@ m.forget(sys.argv[4],sys.argv[5])
         other=self.memory('external',uid());other.save(note());CompanionMemory(other.path).save(note(title='绕过写入'))
         with self.assertRaisesRegex(mm.Rejected,'outside_adapter'):other.chat_notes()
 
-    def test_chat_import_invalidates_inflight_summary_indexes_and_rebinds_correction(self):
+    def test_legacy_exchange_invalidates_inflight_without_promoting_notes(self):
         def summarizer(req,**kw):return {'text':'合成旧话题OLD','source_turn_ids':req['source_turn_ids']}
         chat,http,sync=self.chat(context=ContextManager(summarizer=summarizer,budget=__import__('context_manager').Budget(32768)))
-        first=chat.change_memory({'note':note(body='OLD_SYNTHETIC')});self.transfer(self.b,self.state())
+        with self.assertRaisesRegex(ValueError,'旧手工记忆入口已移除'):
+            chat.change_memory({'note':note(body='MUST_NOT_BE_CREATED')})
+        self.assertEqual(self.a.list()['records'],[])
+        first=self.a.save(note(body='OLD_SYNTHETIC'));self.transfer(self.b,self.state())
+        approved(chat,'CURRENT_APPROVED_FACT')
         for i in range(10):chat.reply('旧话题OLD'+str(i))
+        # Seed via the real host commit seam; new turns are not old enough for
+        # the configured periodic summarizer merely because ten replies ran.
+        view=chat.store.summary_view(chat.store.session_id,keep_recent=6,batch=3)
+        self.assertEqual(len(view['new_turns']),3)
+        self.assertTrue(chat.store.commit_summary(chat.store.session_id,view,view['new_turns'],'合成旧话题OLD'))
         self.assertTrue(chat.store.summary_view(chat.store.session_id)['segments'])
         self.b.save(note(body='NEW_SYNTHETIC'),record_id=first['id'],revision=first['revision'])
         remote=self.state(self.b);plan=sync.preview(remote,expected_scope=self.scope)
@@ -210,16 +221,20 @@ m.forget(sys.argv[4],sys.argv[5])
             try:chat.reply('在途旧请求')
             except ValueError as error:errors.append(error)
         worker=threading.Thread(target=send);worker.start();self.assertTrue(http.enter.wait(1))
-        self.assertTrue(sync.apply(remote,plan,expected_scope=self.scope)['applied'])
-        http.release.set();worker.join(2);self.assertFalse(worker.is_alive());self.assertTrue(errors)
+        try:self.assertTrue(sync.apply(remote,plan,expected_scope=self.scope)['applied'])
+        finally:http.release.set();worker.join(2)
+        self.assertFalse(worker.is_alive());self.assertTrue(errors)
         self.assertEqual(chat.store.summary_view(chat.store.session_id)['segments'],[])
         self.assertEqual(chat.store.retrieve(chat.store.session_id,'OLD'),[])
         http.enter=None;chat.reply('现在是什么？');payload=json.dumps(http.calls[-1],ensure_ascii=False)
-        self.assertIn('NEW_SYNTHETIC',payload);self.assertNotIn('OLD_SYNTHETIC',payload)
+        self.assertIn('CURRENT_APPROVED_FACT',payload)
+        self.assertNotIn('NEW_SYNTHETIC',payload);self.assertNotIn('OLD_SYNTHETIC',payload)
+        self.assertEqual(self.a.list()['records'][0]['body'],'NEW_SYNTHETIC')
         self.assertEqual(chat.store.pending_changes(),[])
 
-    def test_coordinator_stages_conflict_and_crash_recovery_blocks_context(self):
-        chat,http,sync=self.chat();first=chat.change_memory({'note':note(body='OLD_SYNTHETIC')})
+    def test_legacy_sync_recovery_gates_chat_without_promoting_remote_notes(self):
+        chat,http,sync=self.chat();first=self.a.save(note(body='OLD_SYNTHETIC'))
+        approved(chat,'CURRENT_APPROVED_FACT')
         self.transfer(self.b,self.state());remote_old=self.state(self.b)
         self.b.save(note(body='REMOTE_SYNTHETIC'),record_id=first['id'],revision=first['revision'])
         remote=self.state(self.b);plan=sync.preview(remote,expected_scope=self.scope)
@@ -227,24 +242,32 @@ m.forget(sys.argv[4],sys.argv[5])
         with self.assertRaises(OSError):sync.apply(remote,plan,expected_scope=self.scope)
         operation=chat.store.pending_changes()[0]['id']
         chat,http,sync=self.chat(configure=False);chat.reply('恢复前不得引用')
-        payload=json.dumps(http.calls[-1],ensure_ascii=False);self.assertNotIn('REMOTE_SYNTHETIC',payload);self.assertNotIn('OLD_SYNTHETIC',payload)
+        payload=json.dumps(http.calls[-1],ensure_ascii=False)
+        for text in ('CURRENT_APPROVED_FACT','REMOTE_SYNTHETIC','OLD_SYNTHETIC'):self.assertNotIn(text,payload)
         with self.assertRaises(mm.Rejected):sync.recover(operation)
         sync.recover(operation,confirmed=True);chat.reply('恢复后')
-        self.assertIn('REMOTE_SYNTHETIC',json.dumps(http.calls[-1],ensure_ascii=False))
-        # A stale sibling now creates an explicit conflict which survives restart.
+        payload=json.dumps(http.calls[-1],ensure_ascii=False)
+        self.assertIn('CURRENT_APPROVED_FACT',payload);self.assertNotIn('REMOTE_SYNTHETIC',payload)
+        self.assertEqual(self.a.list()['records'][0]['body'],'REMOTE_SYNTHETIC')
         c=self.memory('c',uid());self.transfer(c,remote_old)
         c.save(note(body='SIBLING_SYNTHETIC'),record_id=first['id'],revision=first['revision'])
         result=sync.review_exchange(self.state(c),expected_scope=self.scope)
         self.assertTrue(result['staged']);self.assertEqual(self.a.list()['records'],[])
-        chat.reply('冲突未裁决');payload=json.dumps(http.calls[-1],ensure_ascii=False)
+        chat.reply('旧笔记冲突未裁决');payload=json.dumps(http.calls[-1],ensure_ascii=False)
+        self.assertIn('CURRENT_APPROVED_FACT',payload)
         self.assertNotIn('REMOTE_SYNTHETIC',payload);self.assertNotIn('SIBLING_SYNTHETIC',payload)
 
-    def test_export_excludes_chat_and_nonportable_scoped_policy(self):
-        chat,http,sync=self.chat();row=chat.change_memory({'note':note()});chat.reply('ONLY_RAW_CHAT_SYNTHETIC')
+    def test_legacy_export_excludes_chat_and_respects_nonportable_l2_policy(self):
+        chat,http,sync=self.chat();self.a.save(note(body='LEGACY_ONLY'))
+        row=approved(chat,'APPROVED_ONLY');chat.reply('ONLY_RAW_CHAT_SYNTHETIC')
         state=sync.export_exchange(expected_scope=self.scope)
         self.assertEqual(set(state),{'format','version','scope_id','records','revisions'})
-        self.assertNotIn('ONLY_RAW_CHAT_SYNTHETIC',mm.canonical(state).decode())
-        with chat.store.connection() as db:db.execute("UPDATE lc_note_policy SET scope='casual' WHERE note_id=?",(row['id'],))
+        wire=mm.canonical(state).decode()
+        self.assertIn('LEGACY_ONLY',wire)
+        self.assertNotIn('ONLY_RAW_CHAT_SYNTHETIC',wire);self.assertNotIn('APPROVED_ONLY',wire)
+        with chat.store.connection() as db:
+            db.execute('INSERT OR REPLACE INTO lc_note_policy VALUES (?,?,?,?,?,?)',
+                       (row['key'],row['revision'],'casual','unspecified','[]',0))
         with self.assertRaisesRegex(mm.Rejected,'nonportable_note_policy'):sync.export_exchange(expected_scope=self.scope)
 
 

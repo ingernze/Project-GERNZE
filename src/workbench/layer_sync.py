@@ -38,7 +38,15 @@ class LayerSync:
         self.chat=chat;self.layers=chat.layers;self.store=chat.store;self.server_id=server_id
         self.scope=str(uuid.uuid5(uuid.UUID(server_id),'gernze-layer-memory-v1'))
         self.device=str(uuid.uuid5(uuid.UUID(server_id),'desktop'))
-    def info(self):return {'serverId':self.server_id,'scope_id':self.scope,'format':FORMAT,'tiers':[2,3]}
+    def info(self):
+        with self.store.connection() as db:
+            version=db.execute('PRAGMA user_version').fetchone()[0]
+            db_schema_phone=False
+            if version==4 and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='rc_phone_summary_meta'").fetchone():
+                marker=db.execute("SELECT value FROM rc_meta WHERE key='phone_summary_schema'").fetchone();db_schema_phone=bool(marker and marker[0]=='1')
+        return {'serverId':self.server_id,'scope_id':self.scope,'format':FORMAT,'tiers':[2,3],
+                'researchCache':'gernze-research-cache-v1' if version==4 else None,
+                'researchCacheV2':'gernze-research-cache-v2' if version==4 and db_schema_phone else None}
     def _state(self,db):
         row=db.execute("SELECT value FROM lm_layer_sync_meta WHERE key='state'").fetchone()
         return json.loads(row[0]) if row else empty(self.scope)
@@ -107,7 +115,9 @@ class LayerSync:
         state['projection']={identity(t,e['key']):mm.digest(e) for t,e in self._entries(db)}
         return report
     def exchange(self,body,*,desktop_review=False,peer_device=None):
-        if type(body) is not dict or set(body)!={'snapshot'}:raise ValueError('invalid_layer_exchange')
+        if type(body) is not dict or set(body) not in ({'snapshot'}, {'snapshot','capabilities'}):raise ValueError('invalid_layer_exchange')
+        capabilities=body.get('capabilities', [])
+        if type(capabilities) is not list or capabilities not in ([], ['gernze-research-cache-v1'], ['gernze-research-cache-v2']):raise ValueError('unsupported_layer_capabilities')
         core={e['key'] for e in self.layers.core_loader()['entries']}
         remote=checked(body['snapshot'],self.scope,core)
         if (desktop_review or peer_device is not None) and any(m['tier']==2 for m in remote['identities'].values()):raise ValueError('approved_memory_desktop_only')
@@ -147,7 +157,11 @@ class LayerSync:
             if mm.digest(local['graph'])!=before:self.store._barrier(db,'layer_sync');self.chat.revision+=1;self.chat.context.cancel()
             db.execute("INSERT OR REPLACE INTO lm_layer_sync_meta VALUES ('state',?)",(encoded(local),))
             packet={k:v for k,v in local.items() if k!='projection'}
-            return {'serverId':self.server_id,'packet':packet,'conflicts':report['conflicts'],'fingerprint':mm.digest(packet),'status':'needs_decision' if report['conflicts'] else 'ready'}
+            result={'serverId':self.server_id,'packet':packet,'conflicts':report['conflicts'],'fingerprint':mm.digest(packet),'status':'needs_decision' if report['conflicts'] else 'ready'}
+            if capabilities:
+                from .research_transfer import export_cache
+                result['research']=export_cache(db,self.server_id,self.scope,include_phone=capabilities==['gernze-research-cache-v2'])
+            return result
     def decide(self,body):
         if type(body) is not dict or set(body)!={'id','revision','fingerprint','delete'} or type(body['delete']) is not bool:raise ValueError('invalid_layer_decision')
         with self.chat.guard,self.store.connection() as db:

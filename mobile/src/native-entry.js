@@ -3,6 +3,7 @@ window.HecateNative=createRemindersHost();
 
 import {mountUpdates} from './native-updates';
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountUpdates,{once:true});else mountUpdates();
+window.addEventListener('pageshow',event=>{if(event.persisted)mountUpdates();});
 
 import {mountShake} from './native-shake';
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountShake,{once:true});else mountShake();

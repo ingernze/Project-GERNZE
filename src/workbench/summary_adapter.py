@@ -85,7 +85,9 @@ def validate_request(request):
         if type(pair['origin']) is not str or pair['origin'] not in {'user','quote','fiction','external_ai','inference'}:fail('invalid_input')
         messages=pair['messages']
         if type(messages) is not list or len(messages)!=2:fail('incomplete_pair')
-        for message,role,maximum in zip(messages,('user','assistant'),(1000,4000)):
+        # Match saved chat body limits; the full request still must fit the
+        # existing context/output/transport budget before credentials or HTTP.
+        for message,role,maximum in zip(messages,('user','assistant'),(1000,64000)):
             if type(message) is not dict or set(message)!={'role','content'} or message['role']!=role:fail('incomplete_pair')
             _text(message['content'],maximum)
     if len(set(message_ids))!=len(message_ids):fail('invalid_sources')
@@ -123,6 +125,11 @@ def conservative_count(messages):
     return len(json.dumps(messages,ensure_ascii=False,separators=(',',':')).encode('utf-8'))+64*len(messages)+128
 
 
+def summary_messages(data):
+    return [{'role':'system','content':SYSTEM_PROMPT},
+            {'role':'user','content':json.dumps(data,ensure_ascii=False,separators=(',',':'))}]
+
+
 @dataclass(frozen=True)
 class Limits:
     context_window: int = 8192
@@ -134,7 +141,7 @@ class Limits:
     def __post_init__(self):
         if (not _integer(self.context_window,256,10_000_000) or not _integer(self.margin,0,self.context_window-1)
             or not _integer(self.max_request_bytes,1024,1_048_576) or not _integer(self.max_response_bytes,256,1_048_576)
-            or type(self.io_timeout) not in (int,float) or not math.isfinite(self.io_timeout) or not 0<self.io_timeout<=30):
+            or type(self.io_timeout) not in (int,float) or not math.isfinite(self.io_timeout) or not 0<self.io_timeout<=60):
             raise ValueError('摘要预算或IO边界无效。')
 
 
@@ -247,6 +254,11 @@ class SummaryAdapter:
         if not _integer(n,0,100_000_000):fail('invalid_counter')
         return n
 
+    def input_fits(self,request):
+        """Pure preflight for whole-pair selection; no config, key or HTTP I/O."""
+        data,_=validate_request(request)
+        return self.count(summary_messages(data))+data['max_output_units']+self.limits.margin<=self.limits.context_window
+
     def __call__(self,request,*,cancel_event,deadline):
         started=time.monotonic();report={'status':'failed','count_kind':'caller_tokenizer' if self.exact else 'conservative_estimate'}
         result=None;error=None;control=None
@@ -274,8 +286,7 @@ class SummaryAdapter:
 
     def _execute(self,request,control,report):
         data,source_ids=validate_request(request);control.check()
-        messages=[{'role':'system','content':SYSTEM_PROMPT},
-                  {'role':'user','content':json.dumps(data,ensure_ascii=False,separators=(',',':'))}]
+        messages=summary_messages(data)
         maximum=data['max_output_units']
         content=self.complete(messages,maximum,control,report,source_count=len(source_ids))
         summary=_json(content);control.check()
@@ -316,6 +327,10 @@ class SummaryAdapter:
             control.check()
             if isinstance(exc.reason,(TimeoutError,socket.timeout)):fail('io_timeout')
             fail('connection_failed')
+        except (TimeoutError,socket.timeout):
+            control.check();fail('io_timeout')
+        except (OSError,http.client.HTTPException):
+            control.check();fail('connection_failed')
         # Close even when cancellation happened while opening or while validating headers.
         try:
             control.check()
@@ -334,7 +349,12 @@ class SummaryAdapter:
             chunks=[];size=0
             while True:
                 control.check()
-                chunk=response.read1(min(4096,self.limits.max_response_bytes+1-size));control.check()
+                try:chunk=response.read1(min(4096,self.limits.max_response_bytes+1-size))
+                except (TimeoutError,socket.timeout):
+                    control.check();fail('io_timeout')
+                except (OSError,http.client.HTTPException):
+                    control.check();fail('connection_failed')
+                control.check()
                 if type(chunk) is not bytes:fail('invalid_response')
                 if not chunk:break
                 chunks.append(chunk);size+=len(chunk)
@@ -347,6 +367,14 @@ class SummaryAdapter:
             control.check();value=_json(text);control.check()
             if type(value) is not dict or type(value.get('choices')) is not list or len(value['choices'])!=1:fail('invalid_response')
             choice=value['choices'][0]
+            if type(choice) is dict:
+                reason=choice.get('finish_reason')
+                report['finish_reason']=reason if type(reason) is str and reason in {'stop','length','content_filter','tool_calls','insufficient_system_resource'} else 'missing' if reason is None else 'other'
+                usage=value.get('usage')
+                if type(usage) is dict:
+                    details=usage.get('completion_tokens_details')
+                    for key,number in [('completion_tokens',usage.get('completion_tokens')),('reasoning_tokens',details.get('reasoning_tokens') if type(details) is dict else None)]:
+                        if type(number) is int and 0<=number<=10_000_000:report[key]=number
             if type(choice) is not dict or choice.get('finish_reason')!='stop':fail('not_complete')
             message=choice.get('message')
             if type(message) is not dict or message.get('role','assistant')!='assistant' or message.get('tool_calls') or message.get('function_call'):fail('invalid_response')

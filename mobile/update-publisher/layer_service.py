@@ -27,7 +27,11 @@ class _SyncStore:
             db.row_factory=sqlite3.Row
             try:
                 db.execute('PRAGMA secure_delete=ON');db.execute('BEGIN IMMEDIATE')
-                if db.execute('PRAGMA user_version').fetchone()[0]!=1:raise ValueError('updated_workbench_required')
+                version=db.execute('PRAGMA user_version').fetchone()[0]
+                if version not in (1,4):raise ValueError('updated_workbench_required')
+                if version==4:
+                    summary=db.execute("SELECT value FROM rc_meta WHERE key='summary_schema'").fetchone()
+                    if not summary or summary[0]!='2':raise ValueError('updated_workbench_required')
                 tables={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
                 if not {'lc_meta','lm_approved','lm_working','lm_receipts','lm_remote_sources','lm_sync_conflicts','lm_layer_sync_meta'}<=tables:raise ValueError('updated_workbench_required')
                 self.owner=ConversationStore._get(db,'owner')
@@ -53,7 +57,16 @@ class LayerService(LayerSync):
         load_core()
         chat=SimpleNamespace(store=store,layers=layers,guard=store.guard,revision=0,context=SimpleNamespace(cancel=lambda:None))
         super().__init__(chat,server_id)
-    def info(self):return {**super().info(),'reviewOn':'desktop','phoneRaw':'gernze-phone-raw-v1'}
+        from workbench.bookshelf_transfer import BookshelfTransfer
+        self.bookshelf=BookshelfTransfer(store,server_id,self.scope)
+    def info(self):
+        info=super().info()
+        from workbench.bookshelf_transfer import FORMAT
+        info['bookshelfCache']=FORMAT if self.bookshelf.available() else None
+        return {**info,'reviewOn':'desktop','phoneRaw':'gernze-phone-raw-v1','phoneResearchRaw':'gernze-phone-research-raw-v1' if info['researchCache'] else None}
 
-    def exchange(self,body,*,peer_device=None):return super().exchange(body,desktop_review=True,peer_device=peer_device)
+    def exchange(self,body,*,peer_device=None):
+        if type(body) is dict and 'bookshelf' in body:
+            return self.bookshelf.exchange(body)
+        return super().exchange(body,desktop_review=True,peer_device=peer_device)
     def decide(self,body):raise ValueError('review_on_desktop')

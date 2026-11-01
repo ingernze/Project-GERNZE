@@ -43,6 +43,7 @@ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $publicSeed) | Out
 if (-not (Test-Path -LiteralPath $python)) { throw "Build Python missing: $python" }
 if (-not (Test-Path -LiteralPath $icon)) { throw "Icon missing: $icon" }
 if (-not (Test-Path -LiteralPath $idle)) { throw "Idle assets missing: $idle" }
+if (-not (Test-Path -LiteralPath (Join-Path $project 'workbench\static\assets\jelly\libao-desktop.png'))) { throw 'Workbench brand image missing: libao-desktop.png' }
 if (-not (Test-Path -LiteralPath (Join-Path $project 'assets\voice\manifest.json'))) { throw 'Core fixed recordings missing' }
 
 # Rebuild the bundled native observer using the Windows .NET Framework compiler.

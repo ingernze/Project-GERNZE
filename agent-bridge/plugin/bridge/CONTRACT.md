@@ -6,7 +6,7 @@
 
 已接：第一层人设/基础文件只读；旧电脑版lc_summaries只读，过滤当前epoch/未删除会话；Codex角色原文独立留底；有来源的第三层候选保存、CAS纠正、幂等、撤回防复活。
 
-待2号接回：正式第二层发布只读快照；电脑版把本模块第三层纳入待审显示/检索；第四层把Agent会话纳入书架。手机尚无该模块通道，不能声称双端互通。设置项desktopConsumesAgentTier3暂固定false，2号真正集成后才能调整为宿主实测状态；旧桌面摘要也不能自动冒充已审第二层。
+现行代码已能只读第二层：approved_snapshot存在时读取指定快照；未配置或文件缺失时，若desktop_journal存在lm_approved则只读有效、未撤回且无冲突的记录。桌面自动发布快照流程仍须另行核验。待接：电脑版消费本模块第三层、第四层纳入书架，手机也未接此通道。desktopConsumesAgentTier3仍固定false；独立合成适配实验不等于正式宿主已启用，旧桌面摘要也不能自动冒充已审第二层。
 
 ## 权限与来源
 
@@ -18,7 +18,7 @@ MCP没有写第一二层、批准、任意文件路径、SQL或shell的接口。
 
 1. 用core.read_agent_working(path)读取独立库（只读，不创建）。保留key、revision、sourceHash、sourceRefs和deleted；tier=3、status=pending、approved=false。撤回条目用于失效处理，不进入回答。重复同key/revision不要重复导入，新的纠正不能被旧版覆盖。
 2. 现有库不会自动消费这些内容。桌面要明确把其作为第三层检索资料，不能把函数调用成功等同模型请求已带入。应验证请求实际包含符合条件的合成摘要。
-3. 第二层由桌面审查流程原子发布JSON快照（先写同目录临时文件，再替换），settings.local.json的approved_snapshot指定该路径。格式：`{"format":"gernze-approved-snapshot-v1","tier":2,"entries":[{"key":"来源key","revision":"当前版本","body":"已审正文","deleted":false}]}`。保留删除标记；MCP只读，不新增审批工具。未发布/缺失时状态是awaiting_desktop_layer_adapter，不是空记忆。
+3. 可选第二层快照的建议发布方式：由桌面审查流程原子写JSON（先写同目录临时文件，再替换），settings.local.json的approved_snapshot指定该路径。格式：`{"format":"gernze-approved-snapshot-v1","tier":2,"entries":[{"key":"来源key","revision":"当前版本","body":"已审正文","deleted":false}]}`。保留删除标记；MCP只读，不新增审批工具。没有可用快照且无法读取桌面已审库时，状态才是awaiting_desktop_layer_adapter，不是空记忆。现有数据库回退只返回活动记录；若将来复用同key跨层晋级，必须另外设计撤回标记如何跨端阻断旧L3，不能将活动行列表当作完整删除同步。
 4. 第四层在agent_turns，原话按session_id/seq归档。可用只读适配纳入月/日书架，时间为UTC ISO，显示按Asia/Shanghai。留底源头是agent_reported，不能和宿主捕获的原文混淆。
 5. 不要用agent库替换或改造现有真实用户数据库。所有适配先在独立合成库/候选目录完成，给作者看效果，认可后交主干。
 
@@ -36,4 +36,10 @@ MCP没有写第一二层、批准、任意文件路径、SQL或shell的接口。
 - MCP Memory参考服务器：https://github.com/modelcontextprotocol/servers/tree/main/src/memory。只参考可读资源和受控工具的拆分；它的实体图增删接口不符合本项目一二层只读边界，未安装它或迁移现有库。
 - SDK维护仓库：https://github.com/modelcontextprotocol/python-sdk，MIT。上游主分支已有v2接口，不能直接抄给1.27.0；示例路径读取失败，使用已安装1.27.0实际接口与真实握手核对。未编造Star/性能或生产稳定性。
 
-check.py用临时合成库测真实MCP握手和读写。真实模型语义、桌宠请求带入、第二层接回和手机仍未验收；模块测试不代表这些已完成。
+check.py用临时合成库测真实MCP握手和读写。真实模型语义、桌宠请求带入、桌面消费Agent资料和手机仍未验收；模块测试不代表这些已完成。
+
+## 2026-10-24 独立实验边界
+
+本轮另有experiments/agent_progress合成适配：显式选定库/会话/条目，精确读取原文及hash，在真实CompanionChat构造的假HTTP请求中保留agent_reported、tier=3、approved=false。它不在公开发行源码白名单、不被桌面/插件导入，不修改上述正式消费标记。只有带SYNTHETIC_ONLY标记的临时库可运行；此标记是防误用约束，不是系统级隔离。
+
+实验同时验证旧助手历史再引入反例、上下文失效、已观察修订/撤回的本机记账与新进程重开。其整批上下文失效范围较宽、跨库/网络仍存在检查后竞态；尚未观察到的历史版本无法仅凭UUID判断先后。生产接线须主干另审来源依赖、范围选择、UI与语义效果，不把实验直接启用。

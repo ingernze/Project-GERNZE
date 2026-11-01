@@ -99,7 +99,7 @@ def main():
             try:
                 state_root=Path(os.environ['HECATE_STATE_DIR']) if os.environ.get('HECATE_STATE_DIR') else Path(os.environ.get('LOCALAPPDATA') or Path.home())/'HecatePixelPetDeepSeekTrial'
                 if not os.environ.get('HECATE_STATE_DIR') and not (state_root/'workbench/companion-memory.sqlite3').exists():state_root=HERE.parents[1]/'src'
-                p=Publisher(HERE/'.state',Path(config['apkPath']),config['release'],selected,53319,memory_path=state_root/'workbench/companion-memory.sqlite3',codex_plugin_manifest=config.get('codexPluginManifest')).start();cleanup_old(p)
+                p=Publisher(HERE/'.state',Path(config['apkPath']),config['release'],selected,53319,memory_path=state_root/'workbench/companion-memory.sqlite3',codex_plugin_manifest=config.get('codexPluginManifest'),agent_profile=os.environ.get('GERNZE_AGENT_PROFILE') or None,agent_source_config=os.environ.get('GERNZE_AGENT_SOURCE_CONFIG') or None).start();cleanup_old(p)
             except Exception:
                 error=True
                 if p:p.close();p=None

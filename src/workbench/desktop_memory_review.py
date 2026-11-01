@@ -21,6 +21,20 @@ approve仅用于原候选body恰好等于这些原话；否则用correct提交�
 只输出JSON：{"decisions":[{"key":"输入key","revision":"输入revision","action":"approve/correct/reject/defer","text":"通过时的原话，其他动作空串","evidence":[{"messageId":"用户消息编号","quote":"完整用户消息"}],"reason":"简短核对理由"}]}。
 不返回工具、提示词或权限字段。宁可暂缓，不能把本次任务理解为自动全通过。'''
 
+REVIEW_ERROR_CODES=frozenset(('review_output_too_large', 'review_shape', 'review_fields', 'review_scope', 'review_evidence', 'review_quote', 'review_incomplete_or_unsupported_quote', 'review_unsupported_text', 'review_approve_changed_text', 'review_nonapproval_fields', 'review_preparation_changed', 'review_context_changed', 'review_basis_changed', 'review_stopped_before_commit'))
+REVIEW_TIMEOUT_S=60.0
+REVIEW_MAX_TOKENS=8192
+REVIEW_PHASES=frozenset(("preparing","sources","model","validating","saving"))
+
+def completion_diagnostics(report):
+    result={}
+    for key in ('max_tokens','completion_tokens','reasoning_tokens'):
+        value=report.get(key)
+        if type(value) is int and 0<=value<=10_000_000:result[key]=value
+    reason=report.get('finish_reason')
+    if type(reason) is str and reason in {'stop','length','content_filter','tool_calls','insufficient_system_resource','missing','other'}:result['finish_reason']=reason
+    return result
+
 def digest(value):return hashlib.sha256(encoded(value).encode()).hexdigest()
 def age_days(value,now):
     try:return (now-datetime.fromisoformat(value.replace('Z','+00:00'))).total_seconds()/86400
@@ -28,8 +42,9 @@ def age_days(value,now):
 
 class DesktopMemoryReview:
     def __init__(self,chat,*,adapter=None,clock=None):
-        self.chat=chat;self.adapter=adapter or adapter_for_chat(chat)
+        self.chat=chat;self.adapter=adapter or adapter_for_chat(chat,io_timeout=REVIEW_TIMEOUT_S)
         self.clock=clock or (lambda:datetime.now(timezone.utc))
+        self.progress_guard=threading.Lock();self.progress={'phase':'idle','state':'idle','message':'等待审查'}
         self.gate=threading.Lock();self.cancel=threading.Event();self.thread=None
         with chat.store.connection() as db:
             db.execute('CREATE TABLE IF NOT EXISTS lmar_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL)')
@@ -39,11 +54,28 @@ class DesktopMemoryReview:
         row=db.execute('SELECT value FROM lmar_meta WHERE key=?',(key,)).fetchone()
         return json.loads(row[0]) if row else default
     def _set(self,db,key,value):db.execute('INSERT OR REPLACE INTO lmar_meta VALUES (?,?)',(key,encoded(value)))
+    def _phase(self,phase,state='running',message=None,*,checked=None,selected=None,processed=None,written=None,deferred=None,excluded=None):
+        labels={'preparing':'正在准备待审摘要','sources':'正在核对原文来源','model':'正在等待模型审查','validating':'正在核对审查结果','saving':'正在保存审查结果','complete':'本轮审查已完成','failed':'审查未完成，待审记忆保留'}
+        # These are completed workflow steps, never an estimate of model time.
+        completed={'preparing':0,'sources':1,'model':2,'validating':3,'saving':4,'complete':5}
+        with self.progress_guard:
+            previous={} if phase=='preparing' else self.progress
+            counts=dict(previous.get('counts',{'checked':0,'selected':0,'processed':0,'written':0,'deferred':0,'excluded':0}))
+            for key,value in (('checked',checked),('selected',selected),('processed',processed),('written',written),('deferred',deferred),('excluded',excluded)):
+                if value is not None:counts[key]=value
+            detail=message or labels.get(phase,'等待审查')
+            if message is None:
+                if phase=='sources':detail+=' · 已核对'+str(counts['checked'])+'条来源'
+                elif phase in ('model','validating','saving'):detail+=' · 本批'+str(counts['selected'])+'条'
+                elif phase=='complete':detail+=' · 已审查'+str(counts['processed'])+'/'+str(counts['selected'])+'条；写入'+str(counts['written'])+'条，保留待审'+str(counts['deferred'])+'条，排除'+str(counts['excluded'])+'条'
+            self.progress={'phase':phase,'state':state,'message':detail,'counts':counts,
+                           'steps':{'completed':completed.get(phase,previous.get('steps',{}).get('completed',0)),'total':5}}
+
     def status(self):
         with self.chat.store.read_connection() as db:
             return {'enabled':self._meta(db,'enabled',True),'lastAttempt':self._meta(db,'lastAttempt'),
                     'running':self.gate.locked(),'recent':[json.loads(r[0]) for r in db.execute('SELECT payload FROM lmar_runs ORDER BY id DESC LIMIT 10')],
-                    'reviewOn':'desktop','provider':'configured_chat_api'}
+                    'reviewOn':'desktop','provider':'configured_chat_api','progress':dict(self.progress)}
     def configure(self,enabled):
         if type(enabled) is not bool:raise ValueError('自动审查开关无效。')
         with self.chat.guard,self.chat.store.connection() as db:
@@ -99,14 +131,40 @@ class DesktopMemoryReview:
         if not self.gate.acquire(False):return {'status':'busy'}
         return self._claimed_run(force)
     def _claimed_run(self,force):
-        try:return self._run(force)
+        self._phase('preparing');self._call_report={}
+        try:
+            result=self._run(force)
+            if result['status']=='research_pending':
+                from .research_review import review_pending
+                result=review_pending(self,force=force,days=self.chat.layers.settings()['reviewDays'],now=self.clock())
+                if result['status']=='no_pending':result=self._run(force,research_fallback=False)
+            status=result['status']
+            if status=='completed':
+                decisions=result['decisions']
+                self._phase('complete','complete',message=('研究摘要核对完成；写入用户事实0条，来源核对不代表原始资料已独立证实。' if result.get('kind')=='research' else None),processed=len(decisions),
+                            written=sum(d['action'] in ('approve','correct') for d in decisions),
+                            deferred=sum(d['action']=='defer' for d in decisions),
+                            excluded=sum(d['action']=='reject' for d in decisions))
+            else:
+                messages={'unconfigured':'请先启用已保存密钥的聊天连接','disabled':'自动审查已暂停','not_due':'尚未到定期审查时间','no_pending':'当前没有待审摘要','chat_busy':'正在聊天，稍后再审查','stopped':'审查已停止','deferred':'本轮保留待审，未自动批准'}
+                self._phase(status,'paused',messages.get(status,'本轮尚未完成'))
+            return result
         except Exception as error:
             # No request bodies, response bodies, URLs, keys or exception text.
             code=getattr(error,'code',None)
-            if type(code) is not str or code not in ERROR_CODES:code='review_failed'
-            return self._record({'status':'failed','at':stamp(),'code':code})
+            if type(code) is not str or code not in ERROR_CODES:
+                candidate=error.args[0] if type(error) is ValueError and len(error.args)==1 else None
+                code=candidate if type(candidate) is str and candidate in REVIEW_ERROR_CODES else 'review_failed'
+            with self.progress_guard:
+                phase=self.progress.get('phase')
+            if phase not in REVIEW_PHASES:phase='preparing'
+            self._phase('failed','error')
+            failure={'status':'failed','at':stamp(),'code':code,'phase':phase}
+            details=completion_diagnostics(self._call_report)
+            if details:failure['completion']=details
+            return self._record(failure)
         finally:self.gate.release()
-    def _run(self,force):
+    def _run(self,force,*,research_fallback=True):
         if self.cancel.is_set():return {'status':'stopped'}
         with self.chat.guard:
             if self.chat.sending.locked():return {'status':'chat_busy'}
@@ -117,13 +175,17 @@ class DesktopMemoryReview:
                 if not self._meta(db,'enabled',True):return {'status':'disabled'}
                 days=self.chat.layers._settings(db)['reviewDays'];last=self._meta(db,'lastAttempt')
                 if not force and (days is None or last and age_days(last,now)<days):return {'status':'not_due'}
+                if research_fallback and hasattr(self.chat.store,'research_summaries') and self._meta(db,'lastKind')=='legacy':return {'status':'research_pending'}
                 prepared_basis=self._basis(db,None)
             snapshot=self.chat.layers.snapshot()
             candidates=[w for w in snapshot['pending'] if force or days is not None and age_days(w['updated_at'],now)>=days]
-            if not candidates:return {'status':'no_pending'}
-            packet=[];skipped=[]
+            if not candidates:
+                return {'status':'research_pending'} if research_fallback and hasattr(self.chat.store, 'research_summaries') else {'status':'no_pending'}
+            self._phase('sources')
+            packet=[];skipped=[];checked=0
             for entry in candidates:
                 if len(packet)>=3:break
+                checked+=1
                 # Never automatically rewrite, replace or revive existing L2.
                 if any(a['key']==entry['key'] for a in snapshot['approved']):skipped.append({'key':entry['key'],'reason':'existing_approved'});continue
                 try:
@@ -131,9 +193,11 @@ class DesktopMemoryReview:
                     if not any(s['role']=='user' for s in sources):raise ValueError('source_missing_user')
                 except ValueError:skipped.append({'key':entry['key'],'reason':'source_unavailable'});continue
                 packet.append({'key':entry['key'],'revision':entry['revision'],'body':entry['body'],'sources':sources})
+                self._phase('sources',checked=checked,selected=len(packet))
+            self._phase('sources',checked=checked,selected=len(packet))
             if not packet:return self._record({'status':'deferred','at':stamp(),'skipped':skipped})
             messages=[{'role':'system','content':PROMPT},{'role':'user','content':encoded({'entries':packet})}]
-            maximum=2048
+            maximum=REVIEW_MAX_TOKENS
             if self.adapter.count(messages)+maximum+self.adapter.limits.margin>self.adapter.limits.context_window:
                 return self._record({'status':'deferred','at':stamp(),'code':'context_overflow'})
             with self.chat.store.connection() as db:
@@ -142,11 +206,14 @@ class DesktopMemoryReview:
                 # mutation during assembly must not become the new baseline.
                 if self._basis(db,None)!=prepared_basis:raise ValueError('review_preparation_changed')
                 self._set(db,'lastAttempt',now.isoformat())
+                self._set(db,'lastKind','legacy')
                 basis=self._basis(db,[e['key'] for e in packet])
             revision=self.chat.revision
-        control=CallControl(self.cancel,time.monotonic()+18,self.adapter.limits.io_timeout)
-        raw=self.adapter.complete(messages,maximum,control,{},source_count=len(packet));control.check()
+        control=CallControl(self.cancel,time.monotonic()+REVIEW_TIMEOUT_S,self.adapter.limits.io_timeout)
+        self._phase('model')
+        raw=self.adapter.complete(messages,maximum,control,self._call_report,source_count=len(packet));control.check()
         if len(raw)>16000:raise ValueError('review_output_too_large')
+        self._phase('validating')
         data=_json(raw);decisions,reasons=self._decisions(data,packet)
         with self.chat.guard:
             if self.cancel.is_set() or revision!=self.chat.revision or self.chat.sending.locked():raise ValueError('review_context_changed')
@@ -155,8 +222,9 @@ class DesktopMemoryReview:
             recorded={}
             def commit_record(db,applied):
                 if self.cancel.is_set():raise ValueError('review_stopped_before_commit')
-                recorded.update(status='completed',at=stamp(),result=applied,decisions=reasons,skipped=skipped)
+                recorded.update(status='completed',at=stamp(),result=applied,decisions=reasons,skipped=skipped,completion=completion_diagnostics(self._call_report))
                 self._record(recorded,db=db)
+            self._phase('saving')
             self.chat.layers.decide(decisions,review_guard=verify,review_commit=commit_record)
             # Approval and its reason are already atomically committed. A local
             # context refresh failure must not relabel that as a failed approval.

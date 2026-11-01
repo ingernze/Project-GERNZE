@@ -516,3 +516,159 @@
 !/mobile/android/app/src/main/java/com/gernze/companion/updates/transport/PinnedHttp.java
 !/mobile/android/app/src/main/java/com/gernze/companion/updates/transport/SecurePairStore.java
 !/mobile/android/app/src/main/java/com/gernze/companion/updates/transport/TransportRules.java
+
+!/src/workbench/static/task-progress.js
+!/src/workbench/static/task-progress.css
+!/src/workbench/static/progress-libao.png
+!/src/workbench/tests/connection_profiles_test.py
+!/mobile/www/task-progress.css
+!/mobile/www/progress-libao.png
+!/src/workbench/tests/context_selection_test.py
+
+# 2026-10-24 reviewed outsourcing integrations
+!/tests/
+!/src/libao_browse/
+!/src/workbench/tests/reply_completeness_test.py
+!/src/libao_browse/encounters.py
+!/src/libao_browse/encounter_chat.py
+!/src/libao_browse/encounter_service.py
+!/src/libao_browse/security.py
+!/src/libao_browse/__init__.py
+!/src/workbench/encounter_provider.py
+!/src/workbench/encounter_composition.py
+!/src/workbench/tests/encounter_wiring_test.py
+!/src/workbench/tests/encounter_wiring_support.py
+!/mobile/tests/native-updates-dom.test.mjs
+!/tools/audit_source.py
+!/tests/test_source_audit.py
+
+# 1.1.2 phone summary regression harness
+!/mobile/tests/native-chat-ui/
+!/mobile/tests/summary-backlog.test.mjs
+!/mobile/tests/summary-backlog-storage.browser.mjs
+!/mobile/tests/summary-backlog-storage.html
+!/mobile/tests/run-summary-browser.cjs
+!/mobile/tests/native-chat-ui/bridge.mjs
+!/mobile/tests/native-chat-ui/bridge.test.mjs
+!/mobile/tests/native-chat-ui/build-inputs.json
+!/mobile/tests/native-chat-ui/build.cjs
+!/mobile/tests/native-chat-ui/capacitor-double.mjs
+!/mobile/tests/native-chat-ui/cases.mjs
+!/mobile/tests/native-chat-ui/frame.bundle.js
+!/mobile/tests/native-chat-ui/frame.html
+!/mobile/tests/native-chat-ui/frame.mjs
+!/mobile/tests/native-chat-ui/java-contract.py
+!/mobile/tests/native-chat-ui/lab.bundle.js
+!/mobile/tests/native-chat-ui/lab.html
+!/mobile/tests/native-chat-ui/lab.mjs
+!/mobile/tests/native-chat-ui/README.md
+!/mobile/tests/native-chat-ui/run-browser.cjs
+!/mobile/README.md
+!/docs/release-1.1.2.md
+
+# 2026-10-25 mobile reply regression
+!/mobile/tests/reply-length-budget.test.mjs
+
+# 2026-10-25 long summary regression
+!/mobile/tests/long-summary.test.mjs
+!/mobile/tests/long-summary-storage.browser.mjs
+!/mobile/tests/long-summary-storage.html
+!/src/workbench/tests/long_summary_test.py
+
+# Required workbench brand image after libao naming
+!/src/workbench/static/assets/
+!/src/workbench/static/assets/jelly/
+!/src/workbench/static/assets/jelly/libao-desktop.png
+
+# Explicit research source and regression files; no directory-wide grant
+!/src/workbench/research_catalog.py
+!/src/workbench/tests/research_catalog_test.py
+!/docs/research-catalog.md
+!/src/workbench/research_context.py
+!/src/workbench/tests/research_context_test.py
+
+# Explicit read-only research bookshelf source and checks
+!/src/workbench/research_books.py
+!/src/workbench/tests/research_books_test.py
+
+# Explicit research import source and isolated regression checks only
+!/src/workbench/research_import.py
+!/src/workbench/tests/research_import_test.py
+
+# Explicit single-request course host and checks
+!/src/workbench/study_chat.py
+!/src/workbench/tests/study_chat_test.py
+!/src/workbench/tests/study_chat_http_test.py
+
+# Explicit scoped research summary source and regression checks
+!/src/workbench/research_summaries.py
+!/src/workbench/tests/research_summaries_test.py
+
+# Explicit attributed research review and read-only mobile cache
+!/src/workbench/research_review.py
+!/src/workbench/research_transfer.py
+!/src/workbench/tests/research_review_transfer_test.py
+!/mobile/src/research-cache.mjs
+!/mobile/tests/research-cache.test.mjs
+!/mobile/tests/research-cache.browser.mjs
+
+# Explicit one-use phone research adapter and isolated browser checks
+!/mobile/src/research-use.mjs
+!/mobile/tests/research-use.browser.mjs
+!/mobile/tests/research-native.browser.mjs
+
+# Explicit attributed phone raw archive and isolated checks
+!/src/workbench/phone_research_archive.py
+!/src/workbench/tests/phone_research_archive_test.py
+!/mobile/src/research-raw-sync.mjs
+!/mobile/tests/research-raw-sync.browser.mjs
+
+# Explicit attributed phone summary adapter and isolated checks
+!/src/workbench/phone_research_summaries.py
+!/src/workbench/tests/phone_research_summaries_test.py
+!/mobile/tests/phone-summary-sync.browser.mjs
+
+# Explicit phone research review regression checks
+!/src/workbench/tests/phone_research_review_test.py
+!/mobile/tests/phone-review-cache.browser.mjs
+
+# Explicit isolated research round-trip acceptance
+!/src/workbench/tests/research_roundtrip_test.py
+!/mobile/tests/research-roundtrip.browser.mjs
+!/mobile/tests/run-research-roundtrip.cjs
+
+# Explicit general research selection checks
+!/src/workbench/tests/research_chat_test.py
+!/src/workbench/tests/research_chat.browser.cjs
+
+# Explicit isolated research preview entry and checks
+!/src/research_preview.py
+!/src/tests/test_research_preview.py
+!/启动研究测试.cmd
+!/docs/research-preview.md
+
+# Explicit isolated bookshelf publication sync and regression checks
+!/src/workbench/research_shelf_sync.py
+!/src/workbench/tests/research_shelf_sync_test.py
+
+!/src/workbench/bookshelf_transfer.py
+!/mobile/src/bookshelf-cache.mjs
+!/mobile/src/bookshelf-native.mjs
+
+# Align existing allowlisted Agent code; private profiles stay excluded
+!/src/workbench/agent_memory/
+!/src/workbench/agent_memory/__init__.py
+!/src/workbench/agent_memory/admission.py
+!/src/workbench/agent_memory/atomic.py
+!/src/workbench/agent_memory/coordination.py
+!/src/workbench/agent_memory/items.py
+!/src/workbench/agent_memory/lifecycle.py
+!/src/workbench/agent_memory/profile.py
+!/src/workbench/agent_memory/source.py
+!/src/workbench/agent_memory/summaries.py
+!/docs/agent-runtime.md
+!/src/workbench/agent_memory/transfer.py
+!/mobile/update-publisher/agent_service.py
+!/mobile/src/agent-cache.mjs
+!/mobile/src/agent-sync.mjs
+!/mobile/src/agent-native.mjs

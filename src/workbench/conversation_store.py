@@ -63,6 +63,7 @@ CREATE TABLE lc_directives(id TEXT PRIMARY KEY,session_id TEXT NOT NULL,request_
 
 class ConversationStore:
     """One active chat runtime per journal; a new owner explicitly retires old work."""
+    SUPPORTED_VERSIONS=(0,1)
     def __init__(self,path):
         self.path=Path(path);self.guard=threading.RLock();self.owner=str(uuid.uuid4())
         with self.connection() as db:
@@ -82,7 +83,7 @@ class ConversationStore:
             try:
                 db.execute('PRAGMA secure_delete=ON')
                 version=db.execute('PRAGMA user_version').fetchone()[0]
-                if version not in (0,1):raise ValueError('候选会话库版本较新，未改写。')
+                if version not in self.SUPPORTED_VERSIONS:raise ValueError('候选会话库版本较新，未改写。')
                 if version==0:db.executescript(SCHEMA+'PRAGMA user_version=1;')
                 db.execute('BEGIN IMMEDIATE');yield db;db.commit()
             except Exception:db.rollback();raise
@@ -195,15 +196,18 @@ class ConversationStore:
                 'ref_ids':json.loads(turn['ref_ids']),'request_id':turn['id'],'message_id':turn['assistant_id'],'session_id':turn['session_id']}
     def complete(self,request_id,reply,epoch,ref_ids):
         with self.connection() as db:
-            self._owner(db);turn=db.execute('SELECT * FROM lc_turns WHERE id=?',(request_id,)).fetchone()
-            if not turn or turn['status']!='pending' or turn['owner']!=self.owner or turn['epoch']!=epoch or int(self._get(db,'epoch'))!=epoch:raise ChatStateError('stale_reply','已停止等待这条回复。')
-            db.execute('INSERT INTO lc_messages(id,turn_id,session_id,role,time,origin,content) VALUES (?,?,?,?,?,?,?)',
-                (turn['assistant_id'],request_id,turn['session_id'],'assistant',stamp(),'assistant',reply['text']))
-            db.execute("UPDATE lc_turns SET status='complete',emotion=?,action=?,ref_ids=? WHERE id=?",(reply['emotion'],reply['action'],encoded(ref_ids),request_id))
-            user=db.execute('SELECT content,allowed FROM lc_messages WHERE id=?',(turn['user_id'],)).fetchone()
-            if user['allowed'] and turn['origin']=='user':
-                db.executemany('INSERT OR IGNORE INTO lc_terms VALUES (?,?)',[(turn['user_id'],t) for t in terms(user['content'])])
-            return turn['assistant_id']
+            return self._complete(db,request_id,reply,epoch,ref_ids)
+    def _complete(self,db,request_id,reply,epoch,ref_ids):
+        # A scoped host may save exposure dependencies on this SAME transaction.
+        self._owner(db);turn=db.execute('SELECT * FROM lc_turns WHERE id=?',(request_id,)).fetchone()
+        if not turn or turn['status']!='pending' or turn['owner']!=self.owner or turn['epoch']!=epoch or int(self._get(db,'epoch'))!=epoch:raise ChatStateError('stale_reply','已停止等待这条回复。')
+        db.execute('INSERT INTO lc_messages(id,turn_id,session_id,role,time,origin,content) VALUES (?,?,?,?,?,?,?)',
+            (turn['assistant_id'],request_id,turn['session_id'],'assistant',stamp(),'assistant',reply['text']))
+        db.execute("UPDATE lc_turns SET status='complete',emotion=?,action=?,ref_ids=? WHERE id=?",(reply['emotion'],reply['action'],encoded(ref_ids),request_id))
+        user=db.execute('SELECT content,allowed FROM lc_messages WHERE id=?',(turn['user_id'],)).fetchone()
+        if user['allowed'] and turn['origin']=='user':
+            db.executemany('INSERT OR IGNORE INTO lc_terms VALUES (?,?)',[(turn['user_id'],t) for t in terms(user['content'])])
+        return turn['assistant_id']
     def fail(self,request_id,code='failed'):
         with self.connection() as db:db.execute("UPDATE lc_turns SET status='failed',error_code=? WHERE id=? AND status='pending' AND owner=?",(code,request_id,self.owner))
     def cancel_pending(self):
@@ -243,16 +247,19 @@ class ConversationStore:
                 pair['matched_terms']=sorted(set(terms(pair['messages'][0]['content']))&set(wanted))
             return pairs
 
+    def _summary_candidate_clause(self):
+        return ''
     def summary_view(self,session_id,*,keep_recent=6,batch=6):
         with self.connection() as db:
             self._owner(db);self._session(db,session_id);epoch=int(self._get(db,'epoch'))
             latest=db.execute("SELECT MAX(seq) FROM lc_turns WHERE session_id=? AND status='complete'",(session_id,)).fetchone()[0] or 0
             recent=list(db.execute("SELECT t.seq FROM lc_turns t JOIN lc_messages m ON m.id=t.user_id WHERE t.session_id=? AND t.status='complete' AND m.allowed=1 ORDER BY t.seq DESC LIMIT ?",(session_id,keep_recent)))
             cutoff=min([r[0] for r in recent],default=0)
-            rows=list(db.execute("SELECT t.* FROM lc_turns t JOIN lc_messages m ON m.id=t.user_id WHERE t.session_id=? AND t.status='complete' AND t.origin='user' AND t.covered=0 AND m.allowed=1 AND t.seq<? ORDER BY t.seq LIMIT ?",(session_id,cutoff,batch)))
+            candidates="FROM lc_turns t JOIN lc_messages m ON m.id=t.user_id WHERE t.session_id=? AND t.status='complete' AND t.origin='user' AND t.covered=0 AND m.allowed=1 AND t.seq<?"+self._summary_candidate_clause()
+            rows=list(db.execute('SELECT t.* '+candidates+' ORDER BY t.seq LIMIT ?',(session_id,cutoff,batch)))
             segments=[dict(r) for r in db.execute('SELECT * FROM lc_summaries WHERE session_id=? ORDER BY version DESC LIMIT 16',(session_id,))]
             attempt=db.execute('SELECT * FROM lc_summary_attempt WHERE session_id=?',(session_id,)).fetchone()
-            remaining=db.execute("SELECT COUNT(*) FROM lc_turns t JOIN lc_messages m ON m.id=t.user_id WHERE t.session_id=? AND t.status='complete' AND t.origin='user' AND t.covered=0 AND m.allowed=1 AND t.seq<?",(session_id,cutoff)).fetchone()[0]
+            remaining=db.execute('SELECT COUNT(*) '+candidates,(session_id,cutoff)).fetchone()[0]
             return {'epoch':epoch,'latest_seq':latest,'new_turns':self._pairs_from_rows(db,rows),'segments':list(reversed(segments)),
                     'last_attempt_seq':attempt['last_seq'] if attempt else 0,'last_attempt_status':attempt['status'] if attempt else 'never',
                     'old_unsummarized_turns':remaining,'owner':self.owner}

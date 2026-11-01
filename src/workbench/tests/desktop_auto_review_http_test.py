@@ -25,4 +25,21 @@ class Tests(unittest.TestCase):
         self.assertEqual(self.post('chat.layers.auto_review.run')[0],200)
         self.assertEqual(self.s.chat.layers.snapshot()['approved'],[])
         self.assertFalse(self.s.chat.config()['configured'])
+    def test_connection_routes_are_authenticated_and_never_return_keys(self):
+        class Keys:
+            def __init__(self):self.values={}
+            def get(self,k):return self.values.get(k,'')
+            def set(self,k,v):self.values[k]=v
+            def delete(self,k):self.values.pop(k,None)
+        self.s.chat.keys=Keys()
+        self.assertEqual(self.post('chat.connections.list',token='wrong')[0],403)
+        settings={'enabled':True,'endpoint':'https://synthetic.invalid/chat/completions','model':'synthetic','key':'SYNTHETIC-NEVER-RETURN'}
+        code,data=self.post('chat.connections.save',{'name':'合成连接','settings':settings})
+        self.assertEqual(code,200);ident=data['result']['config']['connection_id']
+        self.assertNotIn('SYNTHETIC-NEVER-RETURN',json.dumps(data))
+        self.assertEqual(self.post('chat.connections.list')[1]['result']['saved_count'],1)
+        self.assertEqual(self.post('chat.connections.select',{'connection_id':'default'})[0],200)
+        self.assertEqual(self.post('chat.connections.remove',{'connection_id':ident})[0],200)
+        self.assertEqual(self.post('chat.connections.save',{'name':'bad','settings':settings,'key':'extra'})[0],400)
+
 if __name__=='__main__':unittest.main(verbosity=2)

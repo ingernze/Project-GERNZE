@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {createHash} from 'node:crypto';
+import {validateResearchCache} from '../src/research-cache.mjs';
+import {canonical} from '../src/memory-records.mjs';
+const packets=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+const first=packets.find(p=>p.records.some(r=>r.restriction==='general'));
+assert(first);const binding={serverId:first.serverId,scope_id:first.scope_id};let checks=0;
+const clone=()=>structuredClone(first),verify=(p,old=null)=>validateResearchCache(p,binding,old);
+const invalid=async change=>{const p=clone();change(p);await assert.rejects(()=>verify(p));checks++;};
+await verify(first);checks++;
+for(const [key,value]of [['format','unknown'],['complete',false],['sequence',0],['serverId',crypto.randomUUID()],['scope_id',crypto.randomUUID()],['apiKey','not permitted']])await invalid(p=>p[key]=value);
+await invalid(p=>p.records[0].trust='approved_user_fact');
+await invalid(p=>p.records[0].body+='corrupt');
+await invalid(p=>p.records[0].study=true);
+await invalid(p=>p.records[0].review.status='approve');
+await invalid(p=>p.records[0].sources[0].source_versions={bad:'id'});
+await invalid(p=>p.records[0].raw_refs={bad:'hash'});
+await invalid(p=>p.records[0].parents=[{id:'bad'}]);
+await invalid(p=>p.records.push(p.records[0]));
+const prior={...binding,sequence:first.sequence+1,fingerprint:'x'};await assert.rejects(()=>verify(first,prior));checks++;
+const checked=await verify(first),same={...binding,sequence:first.sequence,fingerprint:checked.fingerprint};await verify(first,same);checks++;
+const modified=clone();modified.records[0].review.reason='different same sequence';await assert.rejects(()=>verify(modified,same));checks++;
+const unicode=clone();unicode.records[0].body='合成😊';unicode.records[0].body_hash=createHash('sha256').update(unicode.records[0].body).digest('hex');await verify(unicode);checks++;
+const course=packets.find(p=>p.records.some(r=>r.restriction==='study'));assert(course);const courseBinding={serverId:course.serverId,scope_id:course.scope_id};await validateResearchCache(course,courseBinding);checks++;
+for(const mutate of [p=>p.records.find(r=>r.restriction==='study').body='COURSE_SECRET',p=>p.records.find(r=>r.restriction==='study').restriction='general',p=>p.records.find(r=>r.restriction==='study').courses=[]]){
+ const p=structuredClone(course);mutate(p);await assert.rejects(()=>validateResearchCache(p,courseBinding));checks++;
+}
+assert.equal(canonical(first),canonical(packets.find(p=>p===first)));checks++;
+console.log(JSON.stringify({success:true,checks,pythonPacketsAccepted:true,realAPI:false}));

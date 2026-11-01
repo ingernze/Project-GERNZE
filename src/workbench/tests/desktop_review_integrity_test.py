@@ -153,6 +153,25 @@ class Tests(TestCase):
         self.adapter.complete=fail
         result=self.r.run();self.assertEqual(result['status'],'failed');self.assertNotIn(Fault.code,json.dumps(self.r.status()))
 
+    def test_known_failure_retains_safe_code_and_validation_phase(self):
+        self.adapter.edit=lambda d,e:d.update(text='合成且没有证据支持的内容')
+        result=self.r.run()
+        self.assertEqual(result['code'],'review_unsupported_text')
+        self.assertEqual(result['phase'],'validating')
+        self.assertEqual(self.chat.layers.snapshot()['approved'],[])
+    def test_unknown_valueerror_does_not_expose_exception_text(self):
+        def fail(*args,**kw):raise ValueError('SYNTHETIC-PRIVATE-EXCEPTION-TEXT')
+        self.adapter.complete=fail;result=self.r.run()
+        self.assertEqual(result['code'],'review_failed');self.assertEqual(result['phase'],'model')
+        self.assertNotIn('SYNTHETIC-PRIVATE-EXCEPTION-TEXT',json.dumps(self.r.status()))
+        self.assertEqual(self.chat.layers.snapshot()['approved'],[])
+    def test_provider_timeout_retains_safe_code_and_model_phase(self):
+        from workbench.summary_adapter import SummaryAdapterError
+        def fail(*args,**kw):raise SummaryAdapterError('io_timeout')
+        self.adapter.complete=fail;result=self.r.run()
+        self.assertEqual(result['code'],'io_timeout');self.assertEqual(result['phase'],'model')
+        self.assertEqual(self.chat.layers.snapshot()['approved'],[])
+
 def load_tests(loader,tests,pattern):return loader.loadTestsFromTestCase(Tests)
 
 if __name__=='__main__':main(argv=[sys.argv[0]]+rest,verbosity=2)

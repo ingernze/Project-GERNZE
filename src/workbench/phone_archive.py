@@ -48,6 +48,9 @@ class PhoneArchive:
             old=db.execute('SELECT count,chain FROM sessions WHERE device=? AND session=?',(device,sid)).fetchone()
             count,current=(old['count'],old['chain']) if old else (0,ZERO)
             if not turns:return {'format':FORMAT,'sessionId':sid,'next':count,'chain':current,'accepted':0}
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='pr_sessions'").fetchone():
+                scoped=db.execute('SELECT base FROM pr_sessions WHERE device=? AND session=?',(device,sid)).fetchone()
+                if scoped and start+len(turns)>scoped['base']:raise ValueError('research_tail_requires_attributed_channel')
             if start+len(turns)>100000:raise ValueError('phone_archive_session_limit')
             if start>count:raise ValueError('raw_cursor_changed')
             expected=ZERO if start==0 else db.execute('SELECT chain FROM turns WHERE device=? AND session=? AND seq=?',(device,sid,start-1)).fetchone()[0]

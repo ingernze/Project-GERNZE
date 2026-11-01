@@ -9,10 +9,10 @@ function mount(host,{scope,call,send,onBusy=()=>{}}) {
   const historyNote=h('p','subtle desktop-history-note');historyNote.hidden=true;
   const form=h('form','scene-chat-input'),input=h('textarea');input.rows=2;input.placeholder='写下想说的话…';input.maxLength=1000;input.setAttribute('aria-label','和格莉兹说句话');
   const submit=h('button','scene-button','发送'),cancel=h('button','scene-button','停止等待');submit.type='submit';cancel.type='button';cancel.hidden=true;form.append(input,submit,cancel);form.hidden=true;
-  const status=h('p','scene-status','正在读取聊天设置…');status.role='status';const footer=h('div','desktop-chat-footer'),setup=h('button','scene-button desktop-open-settings','前往设置'),bookButton=h('button','scene-button desktop-books-button','记忆书架');setup.type=bookButton.type='button';setup.hidden=true;footer.append(setup,bookButton);area.append(header,toolbar,history,historyNote,form,status,footer);host.append(area);
+  const status=h('p','scene-status','正在读取聊天设置…');status.role='status';const footer=h('div','desktop-chat-footer'),setup=h('button','scene-button desktop-open-settings','前往设置'),bookButton=h('button','scene-button desktop-books-button','记忆书架');setup.type=bookButton.type='button';setup.hidden=true;footer.append(setup,bookButton);const studyNotice=h('div','desktop-study-selection'),studyLabel=h('p','subtle'),studyClear=h('button','scene-button','移除资料');studyClear.type='button';studyNotice.hidden=true;studyNotice.append(studyLabel,studyClear);area.append(header,toolbar,history,historyNote,studyNotice,form,status,footer);host.append(area);
   if(embedded)area.hidden=true;
   let started=false,revealFrame=null;
-  let disposed=false,configured=false,busy=false,chat=null,activeId=null,turns=[],hasMore=false,before=null,historyVersion=0,historyBusy=false;
+  let disposed=false,configured=false,busy=false,chat=null,activeId=null,turns=[],hasMore=false,before=null,historyVersion=0,historyBusy=false,materialSelection=null,activeMaterial=false,lastMaterialUse=null;
   const signal=new AbortController();scope.own(()=>signal.abort());
   function draw(){log.replaceChildren();if(!turns.length)log.append(h('p','desktop-chat-empty','从这里开始，慢慢聊。'));
     for(const t of turns){const article=h('article','desktop-chat-turn');article.dataset.turn=t.id;article.append(h('p','desktop-message-label','你'),h('p','desktop-message desktop-message-user',t.input));article.append(h('p','desktop-message-label','格莉兹'),h('p','desktop-message desktop-message-assistant',t.reply||(t.status==='pending'?'正在想…':'这一轮回复未完成，原文仍已保存。')));log.append(article);}
@@ -29,11 +29,15 @@ function mount(host,{scope,call,send,onBusy=()=>{}}) {
   function apply(config){configured=config.configured;form.hidden=!configured;setup.hidden=configured;status.textContent=configured?'Ctrl / ⌘ + Enter 发送':'聊天尚未启用，可前往设置配置连接。';}
   function setBusy(value){busy=value;onBusy(value);submit.disabled=value;cancel.hidden=!value;}
   function stop(){if(!busy&&!activeId)return;const id=activeId;chat.cancel();activeId=null;historyVersion++;historyBusy=false;const stopped=call('chat.cancel',id?{request_id:id}:{}).catch(()=>{});setBusy(false);status.textContent='已停止等待这条回复。';stopped.then(()=>{if(!disposed&&!busy)loadHistory();});}
-  const memory=root.HecateSceneMemory.mount(embedded?host:area,{scope,call,bookshelfOnly:true,onOpen:stop,onChange:()=>{if(disposed)return;stop();loadHistory();status.textContent='记忆已更新，下一次发送使用当前版本。';}});
+  function clearMaterial(){materialSelection=null;studyNotice.hidden=true;studyLabel.textContent='';}
+  function selectMaterial(item){materialSelection={id:item.id,revision:item.revision,title:item.title,kind:item.kind};studyLabel.textContent='仅下一次提问参考：'+item.title;studyNotice.hidden=false;open();input.focus();}
+  scope.listen(studyClear,'click',clearMaterial);
+  const memory=root.HecateSceneMemory.mount(embedded?host:area,{scope,call,bookshelfOnly:true,onOpen:stop,onStudy:item=>selectMaterial({...item,kind:'course'}),onResearch:item=>selectMaterial({...item,kind:'research'}),onChange:()=>{if(disposed)return;stop();loadHistory();status.textContent='记忆已更新，下一次发送使用当前版本。';}});
   chat=root.HebaoChat.create({requestReply:({text,signal})=>{
-      activeId=crypto.randomUUID();turns=[{id:activeId,input:text,reply:'',status:'pending'}];draw();return call('chat.reply',{text,request_id:activeId},signal);
-    },onReply:reply=>{if(disposed)return;send('hecate:reply',{reply});activeId=null;loadHistory();memory.refresh();},onStatus:(state,error)=>{if(disposed)return;setBusy(state==='loading');status.textContent=state==='loading'?'格莉兹正在想…':state==='error'?(error?.message||'回复未完成，请稍后重试。'):'已收到回复。';if(state==='error'){activeId=null;loadHistory();}}});
-  scope.own(()=>{const id=activeId;disposed=true;historyVersion++;chat.destroy();if(id)call('chat.cancel',{request_id:id}).catch(()=>{});area.remove();});
+      historyVersion++;historyBusy=false;hasMore=false;before=null;activeId=crypto.randomUUID();const material=materialSelection;activeMaterial=Boolean(material);lastMaterialUse=null;clearMaterial();turns=[{id:activeId,input:text,reply:'',status:'pending'}];draw();
+      return call(material?(material.kind==='course'?'chat.study.reply':'chat.research.reply'):'chat.reply',{text,request_id:activeId,...(material?{materials:[{id:material.id,revision:material.revision}]}:{})},signal);
+    },onReply:reply=>{if(disposed)return;send('hecate:reply',{reply});activeId=null;if(activeMaterial){lastMaterialUse=reply.research_use||{used:0};turns[0]={...turns[0],reply:reply.text,status:'complete'};draw();history.scrollTop=history.scrollHeight;}else loadHistory();memory.refresh();},onStatus:(state,error)=>{if(disposed)return;setBusy(state==='loading');status.textContent=state==='loading'?'格莉兹正在想…':state==='error'?(error?.message||'回复未完成，请稍后重试。'):lastMaterialUse?(lastMaterialUse.used?'已收到回复，本轮已参考所选资料。':'已收到回复，本轮未带入所选资料（取用限制或上下文预算）。'):'已收到回复。';if(state==='error'){activeId=null;loadHistory();}}});
+  scope.own(()=>{const id=activeId;disposed=true;clearMaterial();historyVersion++;chat.destroy();if(id)call('chat.cancel',{request_id:id}).catch(()=>{});area.remove();});
   scope.listen(form,'submit',e=>{e.preventDefault();if(!configured||busy||!input.value.trim())return;const text=input.value;input.value='';chat.send(text);});
   scope.listen(input,'keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();form.requestSubmit();}});
   scope.listen(cancel,'click',stop);scope.listen(earlier,'click',()=>loadHistory(true));scope.listen(collapse,'click',()=>loadHistory());
@@ -48,7 +52,7 @@ function mount(host,{scope,call,send,onBusy=()=>{}}) {
     if(embedded){cancelAnimationFrame(revealFrame);revealFrame=requestAnimationFrame(()=>{if(!disposed&&!area.hidden)stage.classList.add('is-chat-view');});}
     changed(true);
   }
-  function close(){if(disposed)return;stop();cancelAnimationFrame(revealFrame);area.hidden=true;stage?.classList.remove('is-chat-view');changed(false);}
+  function close(){if(disposed)return;clearMaterial();stop();cancelAnimationFrame(revealFrame);area.hidden=true;stage?.classList.remove('is-chat-view');changed(false);}
   if(embedded){
     bookButton.remove();const fold=h('button','scene-button desktop-fold-chat','收起对话');fold.type='button';header.append(fold);scope.listen(fold,'click',close);
     scope.listen(area,'keydown',e=>{if(e.key==='Escape'&&!host.querySelector('.desktop-books-overlay:not([hidden])')){e.preventDefault();close();}});
@@ -60,20 +64,38 @@ function mount(host,{scope,call,send,onBusy=()=>{}}) {
 }
 function mountSettings(host,{scope,call}) {
   const h=(tag,cls,text)=>{const e=document.createElement(tag);e.className=cls||'';if(text!==undefined)e.textContent=text;return e;};
-  const details=h('details','scene-chat-settings'),summary=h('summary','','聊天连接'),settings=h('form','scene-chat-config'),enabled=h('input');enabled.type='checkbox';enabled.id='scene-chat-enabled';
-  const enabledLabel=h('label','scene-chat-enable');enabledLabel.append(enabled,document.createTextNode('启用聊天 API'));
-  const endpoint=h('input'),model=h('input'),key=h('input');endpoint.type='url';endpoint.required=true;endpoint.maxLength=2048;model.required=true;model.maxLength=150;key.type='password';key.autocomplete='new-password';key.maxLength=4096;
+  const details=h('details','scene-chat-settings'),summary=h('summary','','聊天 API');details.open=true;
+  const manager=h('section','scene-key-manager'),heading=h('div','scene-key-heading'),count=h('strong','','正在读取已保存密钥…'),add=h('button','scene-button','新增密钥'),list=h('div','scene-key-list'),keyState=h('p','scene-key-status');add.type='button';heading.append(count,add);manager.append(heading,list,keyState);
+  const settings=h('form','scene-chat-config'),name=h('input'),enabled=h('input'),endpoint=h('input'),model=h('input'),key=h('input');
+  name.maxLength=40;name.required=true;enabled.type='checkbox';endpoint.type='url';endpoint.required=true;endpoint.maxLength=2048;model.required=true;model.maxLength=150;key.type='password';key.autocomplete='new-password';key.maxLength=4096;key.placeholder='已保存时可留空，密钥不会回显';
+  const enabledLabel=h('label','scene-chat-enable');enabledLabel.append(enabled,document.createTextNode('启用这个聊天连接'));
   function field(label,input,id){input.id=id;const e=h('label');e.htmlFor=id;e.append(h('span','',label),input);return e;}
-  const save=h('button','scene-button','保存连接'),remove=h('button','scene-button','移除密钥');save.type='submit';remove.type='button';const buttons=h('div','scene-chat-buttons');buttons.append(save,remove);
-  settings.append(enabledLabel,field('接口地址',endpoint,'scene-chat-endpoint'),field('模型名称',model,'scene-chat-model'),field('API 密钥（留空保留已存密钥）',key,'scene-chat-key'),buttons,h('p','subtle','密钥保存在本机 Windows 凭据管理器。保存连接不会发送请求。'));details.append(summary,settings);
-  summary.textContent='聊天 API';details.open=true;host.append(details);
+  const save=h('button','scene-button','保存并使用'),remove=h('button','scene-button','移除这份密钥'),cancel=h('button','scene-button','取消新增');save.type='submit';remove.type=cancel.type='button';cancel.hidden=true;
+  const buttons=h('div','scene-chat-buttons');buttons.append(save,remove,cancel);
+  settings.append(field('连接名称',name,'scene-chat-name'),enabledLabel,field('接口地址',endpoint,'scene-chat-endpoint'),field('模型名称',model,'scene-chat-model'),field('API 密钥',key,'scene-chat-key'),buttons,h('p','subtle','密钥保存在本机 Windows 凭据管理器，仅显示是否已保存。切换和保存连接不会发送请求。'));
+  details.append(summary,manager,settings);host.append(details);
   const status=h('p','scene-status','正在读取聊天设置…');status.role='status';host.append(status);
-  const signal=new AbortController();let disposed=false,keyPresent=false;
-  scope.own(()=>{disposed=true;signal.abort();key.value='';details.remove();status.remove();});
-  function apply(config){enabled.checked=config.enabled;endpoint.value=config.endpoint;model.value=config.model;key.value='';keyPresent=config.key_present;remove.disabled=!keyPresent;status.textContent=config.configured?'聊天连接已就绪，发送后才连接服务。':'聊天未配置或已关闭。';}
-  scope.listen(settings,'submit',async e=>{e.preventDefault();save.disabled=true;remove.disabled=true;const config={enabled:enabled.checked,endpoint:endpoint.value.trim(),model:model.value.trim()};if(key.value.trim())config.key=key.value.trim();try{const result=await call('chat.config.set',{settings:config},signal.signal);if(disposed)return;apply(result);status.textContent='连接已保存，尚未发送请求。';}catch(e){if(!disposed)status.textContent=e.message;}finally{key.value='';if(!disposed){save.disabled=false;remove.disabled=!keyPresent;}}});
-  scope.listen(remove,'click',async()=>{remove.disabled=save.disabled=true;try{const result=await call('chat.key.delete',{},signal.signal);if(!disposed)apply(result);}catch(e){if(!disposed)status.textContent=e.message;}finally{if(!disposed){save.disabled=false;remove.disabled=!keyPresent;}}});
-  call('chat.config.get',{},signal.signal).then(c=>{if(!disposed)apply(c);}).catch(()=>{if(!disposed){status.textContent='聊天设置暂时未能读取，请重新打开设置。';save.disabled=remove.disabled=true;}});
+  const signal=new AbortController();let disposed=false,busy=false,selected=null,current=null,saved=null;
+  function lock(value){busy=value;for(const b of details.querySelectorAll('button,input'))b.disabled=value;if(!value)remove.disabled=selected===null||!current?.key_present;}
+  function show(config){current=config;selected=config.connection_id;name.value=config.connection_name||'默认连接';enabled.checked=config.enabled;endpoint.value=config.endpoint;model.value=config.model;key.value='';key.required=false;cancel.hidden=true;
+    keyState.textContent=config.key_present?'当前密钥：已保存 · 内容隐藏':'当前密钥：尚未设置';
+    status.textContent=config.configured?'当前连接已就绪，发送后才连接服务。':config.key_present?'密钥已保存，当前连接尚未启用。':'请填写并保存这个连接的密钥。';remove.disabled=!config.key_present;
+  }
+  function paint(value){saved=value;count.textContent='已保存 '+value.saved_count+' 个密钥';list.replaceChildren();
+    for(const row of value.connections){const b=h('button','scene-button scene-key-choice');b.type='button';b.setAttribute('aria-pressed',String(row.id===value.active_id));b.append(h('span','',row.name),h('small','',(row.id===value.active_id?'当前使用 · ':'')+(row.key_present?'已保存':'未设置')));
+      b.onclick=async()=>{if(busy)return;lock(true);key.value='';try{const result=await call('chat.connections.select',{connection_id:row.id},signal.signal);if(!disposed){show(result.config);paint(result.list);status.textContent='已切换连接，尚未发送请求。';}}catch(e){if(!disposed)status.textContent=e.message;}finally{if(!disposed)lock(false);}};list.append(b);
+    }
+  }
+  add.onclick=()=>{if(busy)return;selected=null;name.value='连接 '+((saved?.connections.length||0)+1);key.value='';key.required=true;enabled.checked=true;cancel.hidden=false;remove.disabled=true;keyState.textContent='新增密钥：填写后点“保存并使用”';status.textContent='保存后才会加入列表，当前连接暂不改变。';name.focus();};
+  cancel.onclick=()=>{if(current){show(current);paint(saved);}};
+  scope.listen(settings,'submit',async e=>{e.preventDefault();if(busy)return;lock(true);
+    const params={name:name.value.trim(),settings:{enabled:enabled.checked,endpoint:endpoint.value.trim(),model:model.value.trim()}};
+    if(selected!==null)params.connection_id=selected;if(key.value.trim())params.settings.key=key.value.trim();key.value='';
+    try{const result=await call('chat.connections.save',params,signal.signal);if(!disposed){show(result.config);paint(result.list);status.textContent='密钥与连接已保存，尚未发送请求。';}}catch(error){if(!disposed)status.textContent=error.message||'没有保存成功，请重试。';}finally{if(!disposed)lock(false);}
+  });
+  scope.listen(remove,'click',async()=>{if(busy||selected===null)return;lock(true);key.value='';try{const result=await call('chat.connections.remove',{connection_id:selected},signal.signal);if(!disposed){show(result.config);paint(result.list);status.textContent='这份密钥已移除，其他密钥保留。';}}catch(error){if(!disposed)status.textContent=error.message;}finally{if(!disposed)lock(false);}});
+  lock(true);Promise.all([call('chat.config.get',{},signal.signal),call('chat.connections.list',{},signal.signal)]).then(([config,value])=>{if(!disposed){show(config);paint(value);lock(false);}}).catch(()=>{if(!disposed){key.value='';status.textContent='连接列表暂未读取成功，请重新打开设置。';lock(true);}});
+  scope.own(()=>{disposed=true;signal.abort();key.value='';current=saved=null;details.remove();status.remove();});
 }
 root.HecateSceneChat={mount,mountSettings};
 })(window);

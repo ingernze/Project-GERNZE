@@ -1,0 +1,83 @@
+{
+  "alias": {
+    "@capacitor/core": "capacitor-double.mjs"
+  },
+  "inputFiles": [
+    {
+      "file": "mobile/tests/native-chat-ui/bridge.mjs",
+      "sha256": "9fa59ca4207af107f19e4c756f500d5cba4d51f4ab5a6fbdddca7d522baa2967"
+    },
+    {
+      "file": "mobile/tests/native-chat-ui/cases.mjs",
+      "sha256": "1bc05f9d9ace11c1f980b1db21f67c246689b2b42fd43f1569194d8b7149639a"
+    },
+    {
+      "file": "mobile/www/dialogue-page.js",
+      "sha256": "360d76c350e7d4f12f7b78424f8a1d6b8815be9f45bfb4b777d40cc1ca41e7e9"
+    },
+    {
+      "file": "mobile/src/summary-policy.mjs",
+      "sha256": "ce7afbcf07f80316fe1a93684226ab0d2c049af7cec9dccc0c333391d46ae25f"
+    },
+    {
+      "file": "mobile/src/memory-records.mjs",
+      "sha256": "08c9ff88bb5335effd1477a439c0814d32f50a0804b1ed9d36b57b68d9138484"
+    },
+    {
+      "file": "mobile/src/chat-journal.mjs",
+      "sha256": "f3a04d3fec5ae040af6e5ad3e611054c4d12896dfb994eba71bfc276b8954d90"
+    },
+    {
+      "file": "mobile/tests/native-chat-ui/capacitor-double.mjs",
+      "sha256": "4f4ffdf118fc3de908d6ca75ee22bfedfedf660ce8954de61c8b597b5d5ed433"
+    },
+    {
+      "file": "mobile/src/raw-sync.mjs",
+      "sha256": "4f4d6e2228f89c51baf979dfb667a708aec551a1801d78be38973e4ab7c734a2"
+    },
+    {
+      "file": "mobile/src/layer-sync.js",
+      "sha256": "d2102d3739fd4245fa9acded1202d06a2e63823cef352fb11cc75953691f3a4a"
+    },
+    {
+      "file": "src/workbench/chat-protocol.json",
+      "sha256": "f2b69677f99571c75bce98aa85d3fc813d718b0302b9f30e6b1f58978e0b96b9"
+    },
+    {
+      "file": "mobile/src/memory-layers.mjs",
+      "sha256": "2535b1cce152a8cf5222afc0f1f61950df541d90e10e06c9530aa10d373aa152"
+    },
+    {
+      "file": "mobile/src/chat-core.mjs",
+      "sha256": "94a959c12db297cef1c39d99a9b7832ae58b77a0cfa8f4520b881ae931838772"
+    },
+    {
+      "file": "mobile/src/memory-source.mjs",
+      "sha256": "2f6bf9310ab3ecf7cda08f08f5cb4f26743f2c682f47055696e7c4a77cae69ff"
+    },
+    {
+      "file": "mobile/src/memory-sync-core.mjs",
+      "sha256": "b7d90112d913120c6e44f2eacaa585184b2e888c838686a2a7a0d626b09fa38f"
+    },
+    {
+      "file": "mobile/src/layer-sync-core.mjs",
+      "sha256": "2a69315357f3a5ac5d800d8655b39858f45599ba383e5dfc286d2b35cd038230"
+    },
+    {
+      "file": "mobile/src/memory-layer-store.mjs",
+      "sha256": "d730b7ec74f6802328bfec2c339e85d889b237e82ee3c35e68350f8f84357ca7"
+    },
+    {
+      "file": "mobile/src/memory-layer-panel.mjs",
+      "sha256": "7be5384713337756f1c5eb2ea3b2e388d7733f2bcc7c93635a1989ce5a4c3fa8"
+    },
+    {
+      "file": "mobile/src/native-chat.js",
+      "sha256": "12e0460db4d2637a70a1614e414290b303a4372e9d5e39c062b63f0395e031c1"
+    },
+    {
+      "file": "mobile/tests/native-chat-ui/frame.mjs",
+      "sha256": "3aaf83e286eb593fa9a4bbd2e71518402cab4da361d7b26c7f056d7fda74c643"
+    }
+  ]
+}

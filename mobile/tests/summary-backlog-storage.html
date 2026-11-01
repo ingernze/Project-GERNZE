@@ -1,0 +1,5 @@
+<!doctype html><html lang="zh-CN"><meta charset="UTF-8"><title>手机摘要积压事务检查</title><pre id="result">RUNNING</pre><script type="module">
+import {runSummaryBacklogStorageTests} from './summary-backlog-storage.browser.mjs';
+try{window.summaryTestResult=await runSummaryBacklogStorageTests();}catch(e){window.summaryTestResult={status:'failed',error:e.stack};}
+document.getElementById('result').textContent=JSON.stringify(window.summaryTestResult,null,2);
+</script></html>

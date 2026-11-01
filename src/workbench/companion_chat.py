@@ -2,6 +2,7 @@
 from contextlib import nullcontext
 import hashlib
 import json
+import re
 import os
 from pathlib import Path
 import threading
@@ -115,25 +116,58 @@ def validate_settings(settings):
     return {'enabled': settings['enabled'], 'endpoint': endpoint, 'model': model}, key
 
 
+def reply_reserve_for(text, origin='user'):
+    """Finite direct-request heuristic; quoted/source material cannot select detail.
+
+    This is a candidate policy, not semantic intent recognition or a user setting.
+    """
+    if origin != 'user': return 700
+    # Only a standalone direct request can increase the allowance. Mixed quoted
+    # material falls back conservatively rather than trying to infer its author.
+    if any(marker in text for marker in ('```', '"', "'", '“', '”', '「', '」', '『', '』', '>')):
+        return 700
+    direct = text.strip()
+    if re.search(r'^(?:请|帮我|麻烦|能否|我想请你|能不能)?(?:再)?(?:详细|深入|全面|展开)(?:地)?(?:分析|解释|说明|讲解|比较|说说)', direct):
+        return 1800
+    return 700
+
+
 def normalized_reply(content):
     if not isinstance(content, str) or not content.strip():
         raise ValueError('服务没有返回回复文字。')
     text = content.strip()
-    if text.startswith('```') and text.endswith('```'):
-        text = text.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
+    fenced = text.startswith('```')
+    if fenced:
+        if not text.endswith('```') or '\n' not in text:
+            raise ValueError('回复格式不完整，请重试。')
+        text = text.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+    def unique(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value: raise ValueError('重复JSON字段。')
+            value[key] = item
+        return value
     try:
-        value = json.loads(text)
-    except ValueError:
+        value = json.loads(text, object_pairs_hook=unique)
+    except (ValueError, RecursionError):
+        # Preserve custom providers' complete prose, but never turn damaged
+        # structured output (or fenced JSON) into a successful assistant message.
+        if fenced or text.startswith(('{', '[')):
+            raise ValueError('回复JSON损坏，请重试。') from None
         value = {'text': text}
     if not isinstance(value, dict) or not isinstance(value.get('text'), str) or not value['text'].strip():
         raise ValueError('回复格式不完整，请重试。')
-    return {'text': value['text'].strip()[:4000],
+    if len(value['text']) > 64000:
+        raise ValueError('回复超过本地正文上限，未保存截断内容。')
+    return {'text': value['text'].strip(),
             'emotion': value.get('emotion') if value.get('emotion') in ('normal', 'happy', 'annoyed') else 'normal',
             'action': 'sway' if value.get('action') == 'sway' else 'none'}
 
 
 class CompanionChat:
-    def __init__(self, path, *, keys=None, opener=None, memories=None, store=None, context=None):
+    def __init__(self, path, *, keys=None, opener=None, memories=None, store=None, context=None, encounter_provider=None, research_provider=None):
+        if research_provider is not None and (store is None or getattr(research_provider,'journal',None) is not store):
+            raise ValueError('研究取用必须绑定同一支持依赖校验的会话库。')
         self.path = Path(path)
         self.keys = keys or WindowsKeys()
         self.http = opener or build_opener(ProxyHandler({}), NoRedirect())
@@ -151,62 +185,155 @@ class CompanionChat:
         # UTF-8 conservative counting must fit the full persona and selected notes.
         # Callers targeting smaller windows must inject their matching Budget/counter.
         self.context = context if context is not None else ContextManager(budget=Budget(context_window=32768))
-        self.layers = MemoryLayers(self.store)
+        self.layers = getattr(self.store, "create_layers", MemoryLayers)(self.store)
         self.last_context = {}
+        self.encounter_provider = encounter_provider  # Optional, trusted host injection only.
+        self.research_provider = research_provider  # No HTTP/model permission input.
         self._sync_notes()
         self._restore_history()
 
-    def _config(self):
+    def _connections(self):
         if not self.path.exists():
-            return dict(DEFAULTS)
-        raw = self.path.read_bytes()
-        if len(raw) > 8192:
-            raise ValueError('聊天设置文件过大。')
-        config, _ = validate_settings(json.loads(raw))
-        return config
+            raw = dict(DEFAULTS)
+        else:
+            if self.path.stat().st_size > 131072:
+                raise ValueError('连接设置文件过大。')
+            raw = json.loads(self.path.read_text(encoding='utf-8'))
+        if type(raw) is dict and raw.get('schemaVersion') == 1:
+            if set(raw) != {'schemaVersion', 'active', 'connections'} or type(raw['connections']) is not list or not 1 <= len(raw['connections']) <= 32:
+                raise ValueError('连接列表格式无效。')
+            seen=set();rows=[]
+            for item in raw['connections']:
+                if type(item) is not dict or set(item) != {'id','name','settings'}:
+                    raise ValueError('连接项目格式无效。')
+                ident=item['id'];name=item['name']
+                if type(ident) is not str or ident in seen or (ident!='default' and (len(ident)!=32 or any(c not in '0123456789abcdef' for c in ident))):
+                    raise ValueError('连接标识无效。')
+                if type(name) is not str or not 1 <= len(name.strip()) <= 40 or any(ord(c)<32 for c in name):
+                    raise ValueError('连接名称须为1至40字。')
+                settings,key=validate_settings(item['settings'])
+                if key or 'key' in item['settings']:
+                    raise ValueError('连接列表不能保存密钥正文。')
+                seen.add(ident);rows.append({'id':ident,'name':name.strip(),'settings':settings})
+            if raw['active'] not in seen or 'default' not in seen:
+                raise ValueError('当前连接无效。')
+            return {'schemaVersion':1,'active':raw['active'],'connections':rows}
+        settings,key=validate_settings(raw)
+        if key:raise ValueError('密钥只能保存在系统凭据中。')
+        return {'schemaVersion':1,'active':'default','connections':[{'id':'default','name':'默认连接','settings':settings}]}
+
+    def _config(self):
+        doc=self._connections()
+        return dict(next(row['settings'] for row in doc['connections'] if row['id']==doc['active']))
+
+    @staticmethod
+    def _target_for(config,ident):
+        target='Hecate/CompanionChat/'+hashlib.sha256(config['endpoint'].encode()).hexdigest()[:32]
+        return target if ident=='default' else target+'/connection/'+ident
 
     def _target(self, config):
-        return 'Hecate/CompanionChat/' + hashlib.sha256(config['endpoint'].encode()).hexdigest()[:32]
+        return self._target_for(config,self._connections()['active'])
+
+    def _write_connections(self,doc):
+        self.path.parent.mkdir(parents=True,exist_ok=True)
+        temporary=self.path.with_name(self.path.name+'.'+uuid.uuid4().hex+'.tmp')
+        try:
+            temporary.write_text(json.dumps(doc,ensure_ascii=False),encoding='utf-8')
+            os.replace(temporary,self.path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    def _save_connection_key(self,doc,target,key):
+        previous=self.keys.get(target) if key else None
+        if key:self.keys.set(target,key)
+        try:self._write_connections(doc)
+        except Exception:
+            if key:
+                try:
+                    if previous:self.keys.set(target,previous)
+                    else:self.keys.delete(target)
+                except Exception:pass
+            raise
+
+    def _connection_changed(self):
+        self.revision+=1;self.context.cancel()
+        self.store.retire_context('configuration_changed');self.history.clear()
 
     def config(self):
         with self.guard:
-            config = self._config()
-            try:
-                present = bool(self.keys.get(self._target(config)))
-            except (ImportError, ValueError, OSError):
-                present = False
-            return {**config, 'key_present': present, 'configured': config['enabled'] and present}
+            doc=self._connections();row=next(r for r in doc['connections'] if r['id']==doc['active']);config=row['settings']
+            try:present=bool(self.keys.get(self._target_for(config,row['id'])))
+            except (ImportError,ValueError,OSError):present=False
+            return {**config,'key_present':present,'configured':config['enabled'] and present,'connection_id':row['id'],'connection_name':row['name']}
 
-    def configure(self, settings):
-        config, key = validate_settings(settings)
+    def list_connections(self):
         with self.guard:
-            if self.sending.locked():
-                raise ValueError('正在回复，请等待结束后再修改设置。')
-            target = self._target(config)
-            if config['enabled'] and not key and not self.keys.get(target):
-                raise ValueError('启用前请填写这个接口的密钥。')
-            if key:
-                self.keys.set(target, key)
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            temporary = self.path.with_name(self.path.name + '.' + uuid.uuid4().hex + '.tmp')
-            try:
-                temporary.write_text(json.dumps(config, ensure_ascii=False), encoding='utf-8')
-                os.replace(temporary, self.path)
-            finally:
-                temporary.unlink(missing_ok=True)
-            self.revision += 1
-            self.context.cancel()
-            self.store.retire_context('configuration_changed')
-            self.history.clear()
+            doc=self._connections();rows=[]
+            for row in doc['connections']:
+                try:present=bool(self.keys.get(self._target_for(row['settings'],row['id'])))
+                except (ImportError,ValueError,OSError):present=False
+                rows.append({'id':row['id'],'name':row['name'],**row['settings'],'key_present':present})
+            return {'active_id':doc['active'],'saved_count':sum(r['key_present'] for r in rows),'connections':rows}
+
+    def configure(self,settings):
+        config,key=validate_settings(settings)
+        with self.guard:
+            if self.sending.locked():raise ValueError('正在回复，请等待结束后再修改设置。')
+            doc=self._connections();row=next(r for r in doc['connections'] if r['id']==doc['active'])
+            target=self._target_for(config,row['id'])
+            if config['enabled'] and not key and not self.keys.get(target):raise ValueError('启用前请填写这个连接的密钥。')
+            row['settings']=config;self._save_connection_key(doc,target,key);self._connection_changed()
             return self.config()
+
+    def save_connection(self,name,settings,connection_id=None):
+        if type(name) is not str or not 1 <= len(name.strip()) <= 40 or any(ord(c)<32 for c in name):raise ValueError('连接名称须为1至40字。')
+        config,key=validate_settings(settings)
+        with self.guard:
+            if self.sending.locked():raise ValueError('正在回复，请等待结束后再切换连接。')
+            doc=self._connections()
+            if connection_id is None:
+                if len(doc['connections'])>=32:raise ValueError('已保存连接较多，请先移除不再使用的连接。')
+                if not key:raise ValueError('新增连接时请填写密钥。')
+                row={'id':uuid.uuid4().hex,'name':name.strip(),'settings':config};doc['connections'].append(row)
+            else:
+                row=next((r for r in doc['connections'] if r['id']==connection_id),None)
+                if row is None:raise ValueError('这份连接不存在，请刷新。')
+                row.update(name=name.strip(),settings=config)
+            target=self._target_for(config,row['id'])
+            if config['enabled'] and not key and not self.keys.get(target):raise ValueError('请填写这个连接的密钥。')
+            doc['active']=row['id'];self._save_connection_key(doc,target,key);self._connection_changed()
+            return {'config':self.config(),'list':self.list_connections()}
+
+    def select_connection(self,connection_id):
+        with self.guard:
+            if self.sending.locked():raise ValueError('正在回复，请等待结束后再切换连接。')
+            doc=self._connections()
+            if not any(r['id']==connection_id for r in doc['connections']):raise ValueError('这份连接不存在，请刷新。')
+            doc['active']=connection_id;self._write_connections(doc);self._connection_changed()
+            return {'config':self.config(),'list':self.list_connections()}
+
+    def remove_connection(self,connection_id):
+        with self.guard:
+            if self.sending.locked():raise ValueError('正在回复，请等待结束后再移除连接。')
+            doc=self._connections();row=next((r for r in doc['connections'] if r['id']==connection_id),None)
+            if row is None:raise ValueError('这份连接不存在，请刷新。')
+            target=self._target_for(row['settings'],row['id']);previous=self.keys.get(target)
+            self.keys.delete(target)
+            if row['id']=='default':row['settings']['enabled']=False
+            else:doc['connections'].remove(row)
+            if doc['active']==connection_id:
+                doc['active']='default';next(r for r in doc['connections'] if r['id']=='default')['settings']['enabled']=False
+            try:self._write_connections(doc)
+            except Exception:
+                if previous:self.keys.set(target,previous)
+                raise
+            self._connection_changed()
+            return {'config':self.config(),'list':self.list_connections()}
 
     def delete_key(self):
         with self.guard:
-            self.keys.delete(self._target(self._config()))
-            self.revision += 1
-            self.context.cancel()
-            self.store.retire_context('configuration_changed')
-            self.history.clear()
+            if self.sending.locked():raise ValueError('正在回复，请等待结束后再移除密钥。')
+            self.keys.delete(self._target(self._config()));self._connection_changed()
             return self.config()
 
     def _restore_history(self):
@@ -365,6 +492,19 @@ class CompanionChat:
         return {k:v for k,v in value.items() if k in {'text','emotion','action','memory_refs'}}
 
     def reply_request(self,text,*,request_id=None,origin='user',topic='unspecified'):
+        if self.research_provider is None:
+            return self._reply_request(text,request_id=request_id,origin=origin,topic=topic)
+        if not isinstance(text,str) or not text.strip() or len(text)>1000:raise ValueError('请输入1～1000字。')
+        try:
+            with self.research_provider.request_scope(text,request_id,self.store.session_id,origin) as scoped_id:
+                return self._reply_request(text,request_id=scoped_id,origin=origin,topic=topic)
+        except ValueError as error:
+            # The optional adapter exposes stable codes, never DB or payload text.
+            if isinstance(error,self.research_provider.error_type):
+                raise ChatStateError('research_context_stale','研究来源或取用范围已变化，这条请求未完成。') from None
+            raise
+
+    def _reply_request(self,text,*,request_id=None,origin='user',topic='unspecified'):
         if not isinstance(text,str) or not text.strip() or len(text)>1000:raise ValueError('请输入1～1000字。')
         text=text.strip();begun=False
         with self.guard:
@@ -382,21 +522,48 @@ class CompanionChat:
                 if request_id is None:
                     request_id=(self.store.reusable_request(self.store.session_id,text) if origin=='user' and topic=='unspecified' else None) or str(uuid.uuid4())
                 if request_id in self.cancelled_request_ids:raise ChatStateError('cancelled','此请求已停止。')
+                if self.research_provider is not None:
+                    current=self.store.scope.get()
+                    if current is None or current.session_id!=self.store.session_id:
+                        raise ChatStateError('research_session_changed','会话已切换，请重新选择资料。')
                 turn=self.store.begin_turn(self.store.session_id,text,request_id,origin,topic)
                 if 'cached' in turn:
                     cached=turn['cached'];refs=[{'id':n['id'],'title':n['title']} for n in self._usable_notes(notes) if n['id'] in cached['ref_ids'] and n['chat_enabled']]
                     value={k:cached[k] for k in ('text','emotion','action','request_id','message_id','session_id')}
+                    if 'research_use' in cached:value['research_use']=cached['research_use']
                     if refs:value['memory_refs']=refs
                     self.last_context={'summary_status':'cached','complete_history':False};return value
                 begun=True;self.active_request=request_id;revision=self.revision;epoch=self.store.epoch();session_id=self.store.session_id
+            reply_reserve=reply_reserve_for(text,origin)
             summary_status=self.context.summarize(self.store,session_id)
+            provider=self.encounter_provider
+            prepared=provider.prepare(text) if provider is not None and not getattr(self.store,'research_input_only',lambda:False)() else None
             with self.guard:
                 notes=self._sync_notes()
                 if self.revision!=revision or self.store.epoch()!=epoch:raise ChatStateError('stale_reply','已停止等待这条回复。')
                 messages,refs,report=self.context.build(self.store,session_id,request_id,system_prompt()+self.layers.permission_prompt(),text,
-                    self._usable_notes(notes),self.store.note_policies(),origin=origin,topic=topic,summary_status=summary_status)
+                    self._usable_notes(notes),self.store.note_policies(),origin=origin,topic=topic,summary_status=summary_status,
+                    reply_reserve=reply_reserve,external_context=prepared.data if prepared is not None else None)
+                if self.research_provider is not None:
+                    research=self.research_provider.prepare(report,self.context)
+                    if research['data'] is not None:
+                        messages,refs,report=self.context.build(self.store,session_id,request_id,system_prompt()+self.layers.permission_prompt(),text,
+                            self._usable_notes(notes),self.store.note_policies(),origin=origin,topic=topic,summary_status=summary_status,
+                            reply_reserve=reply_reserve,external_context=prepared.data if prepared is not None else None,research_context=research['data'])
+                    self.research_provider.adopt(research,report)
+                    report['research_status']=research['status'] if report['research_adopted'] else ('budget_omitted' if research['data'] is not None else research['status'])
+                report['external_status']=prepared.status if prepared is not None else 'disabled'
+                report['external_mode']=prepared.mode if prepared is not None else None
                 self.last_context=report
-            payload={'model':config['model'],'messages':messages,'stream':False,'max_tokens':700}
+                if prepared is not None and prepared.status=='invalidated':
+                    raise ChatStateError('external_context_stale','读取见闻时来源已变化，未发出请求。')
+                adopted=report['external_adopted']
+                report['external_catalog_revision']=prepared.catalog_revision if adopted else None
+                report['external_source_count']=(len({i['id'] for group in ('items','selectedReflections')
+                    for i in prepared.data[group]}) if adopted else 0)
+                if prepared is not None and prepared.status=='ready' and not adopted:
+                    report['external_status']='budget_omitted'
+            payload={'model':config['model'],'messages':messages,'stream':False,'max_tokens':report['reply_reserve']}
             if urlsplit(config['endpoint']).hostname=='api.deepseek.com':payload['thinking']={'type':'disabled'}
             request=Request(config['endpoint'],data=json.dumps(payload,ensure_ascii=False).encode(),
                             headers={'Content-Type':'application/json','Authorization':'Bearer '+key},method='POST')
@@ -411,12 +578,19 @@ class CompanionChat:
                 raise ValueError(errors.get(error.code,'聊天服务暂未完成请求，请稍后重试。')) from None
             except (ValueError,TypeError,KeyError,IndexError):raise ValueError('回复未完整返回，请稍后重试。') from None
             except Exception:raise ValueError('聊天连接未完成，请检查网络和接口设置。') from None
-            with self.guard, (self.memories.external_gate() if hasattr(self.memories,'external_gate') else nullcontext()):
+            external_gate=provider.publication_guard(prepared) if adopted else nullcontext()
+            with self.guard, (self.memories.external_gate() if hasattr(self.memories,'external_gate') else nullcontext()), external_gate:
                 self._sync_notes()
                 if self.revision!=revision:raise ChatStateError('stale_reply','已停止等待这条回复。')
+                if adopted and self.encounter_provider is not provider:
+                    raise ChatStateError('external_context_stale','见闻配置已变化，这条回复已作废。')
                 assistant_id=self.store.complete(request_id,reply,epoch,[r['id'] for r in refs]);self._restore_history()
                 if refs:reply['memory_refs']=refs
-                return {**reply,'request_id':request_id,'message_id':assistant_id,'session_id':session_id}
+                result={**reply,'request_id':request_id,'message_id':assistant_id,'session_id':session_id}
+                if self.research_provider is not None:
+                    result['research_use']={'status':report['research_status'],
+                        'used':len(research['manifest']) if report['research_adopted'] else 0}
+                return result
         except Exception as error:
             if begun:self.store.fail(request_id,getattr(error,'code','request_failed'))
             raise

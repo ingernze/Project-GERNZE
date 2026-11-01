@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta, date
 import re
 import json
 from .phone_archive import PhoneArchive
+from .phone_research_archive import PhoneResearchArchive
 import sqlite3
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -27,6 +28,10 @@ class MemoryArchive:
             sid=self.store.session_id
             where="t.session_id=? AND t.covered=0 AND s.deleted=0 AND t.status<>'deleted'";args=[sid]
             if before is not None:where+=' AND t.seq<?';args.append(before)
+            if hasattr(self.store,'scope'):
+                # Ordinary chat history excludes research-bearing turns before
+                # opening messages. The raw archive remains an explicit view.
+                where += " AND NOT EXISTS (SELECT 1 FROM rc_exposures r WHERE r.turn_id=t.id AND r.payload!='[]')"
             rows=db.execute('SELECT t.* FROM lc_turns t JOIN lc_sessions s ON t.session_id=s.id WHERE '+where+' ORDER BY t.seq DESC LIMIT ?',(*args,limit+1)).fetchall()
             result=[]
             for t in reversed(rows[:limit]):
@@ -36,7 +41,7 @@ class MemoryArchive:
             covered=db.execute('SELECT COUNT(*) FROM lc_turns WHERE session_id=? AND covered=1',(sid,)).fetchone()[0]
             return {'sessionId':sid,'turns':result,'hasMore':len(rows)>limit,'before':result[0]['seq'] if result else None,'compressedTurns':covered}
 
-    def _entries(self):
+    def _entries(self,*,research_day=None,research_undated=False):
         entries=[]
         with self.store.read_connection() as db:
             for t in db.execute("SELECT t.* FROM lc_turns t JOIN lc_sessions s ON s.id=t.session_id WHERE s.deleted=0 AND t.status<>'deleted' ORDER BY t.seq"):
@@ -63,6 +68,42 @@ class MemoryArchive:
         for row in PhoneArchive(self.store.path).entries():
             stamp=row['userAt'] or row['assistantAt'];rid='phone:'+row['device']+':'+row['session']+':'+str(row['index'])
             entries.append({'id':rid,'kind':'conversation','text':'手机第四层原文（只读副本）\n你：'+row['user']+'\n\n莉宝：'+row['assistant'],'day':day_of(stamp),'status':'active','sourceRefs':[{'id':rid,'label':'已配对手机 · 会话 '+row['session'][:8]+' · 第'+str(row['index']+1)+'轮'}],'updatedAt':row['assistantAt'] or row['userAt'] or ''})
+        research=PhoneResearchArchive(self.store.path)
+        for row in research.metadata():
+            stamp=row['user_at'] or row['assistant_at'];day=day_of(stamp)
+            rid='phone-research:'+row['device']+':'+row['session']+':'+str(row['seq'])
+            text='手机研究对话原文 · 请打开对应日期查看。';refs=[{'id':rid,'label':'手机宿主保存的来源记录，不是已审用户事实'}]
+            if research_day is not None and day==research_day or research_undated and day is None:
+                raw=research.raw(row['device'],row['session'],row['seq'])
+                if raw:
+                    receipt=raw['research'];label='研究后续普通对话（独立归档）'
+                    if receipt:
+                        status=research.source_status(receipt)
+                        label={'current':'研究来源当前可核对','changed':'研究来源已变化或撤回','unavailable':'研究来源当前无法核对'}[status]
+                        refs.append({'id':receipt['source']['id'],'label':'研究摘要版本 '+receipt['source']['revision']+' · '+label})
+                    text='手机研究原文（只读副本）\n'+label+'；不作为已审用户事实。\n你：'+raw['user']+'\n\n莉宝：'+raw['assistant']
+            entries.append({'id':rid,'kind':'conversation','text':text,'day':day,'status':'active','sourceRefs':refs,'updatedAt':row['assistant_at'] or row['user_at'] or ''})
+        from .phone_research_summaries import available,verify,META as PHONE_SUMMARY_META
+        from .research_catalog import ResearchCatalog,ResearchAccess
+        from .research_context import ResearchJournal
+        from .research_summaries import reference
+        from types import SimpleNamespace
+        with self.store.read_connection() as db:
+            if available(db):
+                journal=SimpleNamespace(catalog=ResearchCatalog(self.store.path))
+                journal._verify=lambda conn,manifest,access:ResearchJournal._verify(journal,conn,manifest,access)
+                for row in db.execute('SELECT '+PHONE_SUMMARY_META+' FROM rc_phone_summary_meta ORDER BY version'):
+                    try:meta=verify(journal,db,reference(row),ResearchAccess())
+                    except (ValueError,KeyError,TypeError):continue
+                    day=day_of(meta['created_at']);text='手机研究摘要 · 请打开对应日期查看。'
+                    if research_day is not None and day==research_day or research_undated and day is None:
+                        from .research_catalog import digest
+                        body=db.execute('SELECT body FROM rc_phone_summary_bodies WHERE id=?',(meta['id'],)).fetchone()
+                        if not body or digest(body[0])!=meta['body_hash']:raise ValueError('phone_summary_body_changed')
+                        checked=db.execute('SELECT status FROM rc_summary_reviews WHERE summary_id=? AND revision=? AND body_hash=?',(meta['id'],meta['revision'],meta['body_hash'])).fetchone()
+                        label={'supported':'与所附输入相符','defer':'保留待核对'}.get(checked[0] if checked else None,'未独立核对')
+                        text='手机研究摘要（'+label+'，不是用户事实）\n'+body[0]
+                    entries.append({'id':'phone-summary:'+meta['id'],'kind':'summary','text':text,'day':day,'status':'active','sourceRefs':[{'id':meta['id'],'label':'带来源手机原文 '+str(len(meta['phone_refs']))+' 轮'}],'updatedAt':meta['created_at']})
         return entries
 
     def months(self):
@@ -84,13 +125,13 @@ class MemoryArchive:
         try:
             if date.fromisoformat(day).isoformat()!=day:raise ValueError()
         except ValueError:raise ValueError('日期无效。') from None
-        return {'day':day,'entries':[{k:v for k,v in e.items() if k!='day'} for e in self._entries() if e['day']==day]}
-    def undated(self):return {'entries':[{k:v for k,v in e.items() if k!='day'} for e in self._entries() if e['day'] is None]}
+        return {'day':day,'entries':[{k:v for k,v in e.items() if k!='day'} for e in self._entries(research_day=day) if e['day']==day]}
+    def undated(self):return {'entries':[{k:v for k,v in e.items() if k!='day'} for e in self._entries(research_undated=True) if e['day'] is None]}
     def status(self):
         with self.store.read_connection() as db:
             raw=db.execute('SELECT COUNT(*) FROM lc_messages m JOIN lc_sessions s ON s.id=m.session_id WHERE s.deleted=0').fetchone()[0]
-        phone=len(PhoneArchive(self.store.path).entries())*2
-        return {'phoneStoredMessages':phone,'desktopStoredMessages':raw,'timeZone':'Asia/Shanghai','undatedEntries':len(self.undated()['entries']),'storedMessages':raw+phone,'layerSyncEnabled':True}
+        phone=(len(PhoneArchive(self.store.path).entries())+len(PhoneResearchArchive(self.store.path).metadata()))*2
+        return {'phoneStoredMessages':phone,'desktopStoredMessages':raw,'timeZone':'Asia/Shanghai','undatedEntries':sum(e['day'] is None for e in self._entries()),'storedMessages':raw+phone,'layerSyncEnabled':True}
     def legacy_notes(self):
         # The old sync namespace can still change externally, but never becomes L2.
         if self.legacy is None or not self.legacy.path.is_file():return {'records':[],'readOnly':True,'approved':False}

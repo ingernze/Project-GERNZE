@@ -4,7 +4,7 @@ export function createUpdateController({transport, installer, scanner, storage, 
   let saved={};try{saved=JSON.parse(storage.getItem(key)||'{}')||{};}catch{}
   let pair=validId(saved.pair?.pairingId)?saved.pair:null;
   let ready=validId(saved.ready?.downloadId)?saved.ready:null;
-  let state={busy:false,phase:'idle',message:'电脑连上手机热点后，先扫描电脑上的配对码。',pair,ready,release:null,installed:null,progress:0,permission:false};
+  let state={busy:false,phase:'idle',message:'电脑连上手机热点后，先扫描电脑上的配对码。',pair,ready,release:null,installed:null,progress:0,receivedBytes:0,totalBytes:null,permission:false};
   let handle=null,activeId=null,cancelled=false,disposed=false;
   const emit=patch=>{state={...state,...patch,pair,ready};if(!disposed)onChange({...state});};
   function persist(){storage.setItem(key,JSON.stringify({pair,ready}));}
@@ -56,7 +56,9 @@ export function createUpdateController({transport, installer, scanner, storage, 
   const api={
     get state(){return {...state};},
     init:()=>run(async()=>{
-      handle=await installer.addStateListener(applyInstallState);
+      const listener=await installer.addStateListener(applyInstallState);
+      if(disposed){await listener?.remove();return;}
+      handle=listener;
       await recover();if(!ready&&state.phase==='idle')emit({message:pair?'已记住这台电脑，连上热点后点“检查更新”。':state.message});
     }),
     scan:()=>run(async()=>{if(ready)throw fail('busy');const result=await scanner.scan();return pairPayload(result.payload);}),
@@ -64,6 +66,7 @@ export function createUpdateController({transport, installer, scanner, storage, 
     check:()=>run(async()=>{
       if(!pair)throw fail('unpaired');
       if(ready){emit({phase:'ready',message:'已有完整更新，请先安装，或移除这份下载后重新检查。'});return;}
+      emit({progress:0,receivedBytes:0,totalBytes:null});
       const installed=await installer.getInstalled();const result=await transport.getRelease(pair.pairingId);const r=result.release;
       if(!r||r.packageName!==installed.packageName)throw fail('package_mismatch');
       if(JSON.stringify(r.signerCertificateSha256)!==JSON.stringify(installed.signerCertificateSha256))throw fail('signer_mismatch');
@@ -73,14 +76,22 @@ export function createUpdateController({transport, installer, scanner, storage, 
     download:()=>run(async()=>{
       if(!pair||!state.release||state.phase!=='available')throw fail('invalid_input');
       const id=uuid();activeId=id;cancelled=false;let progressHandle;
-      emit({phase:'downloading',progress:0,message:'正在从电脑下载，请让莉宝保持在前台。'});
+      const total=Number.isSafeInteger(state.release.size)&&state.release.size>0?state.release.size:null;
+      emit({phase:'downloading',progress:total===null?null:0,receivedBytes:0,totalBytes:total,message:'正在从电脑下载，请让莉宝保持在前台。'});
       try{
-        progressHandle=await transport.onProgress(e=>{if(!disposed&&!cancelled&&activeId===id&&e.downloadId===id&&e.totalBytes>0)emit({progress:Math.min(.99,e.receivedBytes/e.totalBytes)});});
+        progressHandle=await transport.onProgress(e=>{
+          if(disposed||cancelled||activeId!==id||e.downloadId!==id||state.phase!=='downloading')return;
+          const received=e.receivedBytes,total=e.totalBytes;
+          if(!Number.isSafeInteger(total)||total<=0||!Number.isSafeInteger(received)||received<state.receivedBytes||received>total)return;
+          if(state.totalBytes!==null&&state.totalBytes!==total)return;
+          emit({progress:received/total,receivedBytes:received,totalBytes:total});
+        });
         if(cancelled)throw fail('cancelled');
         const result=await transport.download(pair.pairingId,state.release.artifactId,id);
         // A completed native handoff must be remembered even if Cancel raced its final response.
         if(result?.status!=='downloaded'||result.downloadId!==id)throw fail('integrity_failed');
         ready={downloadId:id,release:state.release};persist();
+        emit({phase:'verifying',progress:1,receivedBytes:state.totalBytes,message:'文件已下载，正在检查安装包…'});
         const inspected=await installer.inspect({downloadId:id});
         if(inspected.status!=='ready')throw fail('integrity_failed');
         ready={downloadId:id,release:inspected.release};persist();

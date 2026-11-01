@@ -167,6 +167,32 @@ public class LibaoUpdateTransport extends Plugin {
             launch(call,null,id,false,job->new JSObject(memoryAnswer(job,"POST",path,body).toString()));
         }catch(Exception e){call.reject(message(errorCode(e)),errorCode(e));}
     }
+    private JSONObject agentAnswer(Job job,String path,JSONObject body) throws Exception {
+        job.peer=store().get(job.pairingId);
+        try(PinnedHttp http=new PinnedHttp(job.peer,body==null?"GET":"POST",path,body,job)){
+            JSONObject result=http.json(1048576);
+            TransportRules.require(result.getString("serverId").equals(job.peer.getString("serverId")),"tls_mismatch");
+            return result;
+        }
+    }
+    @PluginMethod public void agentCacheInfo(PluginCall call){
+        try{TransportRules.keys(call.getData(),"pairingId");String id=argument(call,"pairingId");
+            launch(call,null,id,false,job->{JSONObject r=agentAnswer(job,"/v1/agent-cache/info",null);
+                TransportRules.keys(r,"serverId","scope_id","capability","readOnly","approved");
+                TransportRules.uuid(r.getString("scope_id"));
+                TransportRules.require("gernze-agent-pending-cache-candidate-v1".equals(r.getString("capability"))&&Boolean.TRUE.equals(r.get("readOnly"))&&Boolean.FALSE.equals(r.get("approved")),"integrity_failed");
+                return new JSObject(r.toString());});
+        }catch(Exception e){call.reject(message(errorCode(e)),errorCode(e));}
+    }
+    @PluginMethod public void agentCacheSnapshot(PluginCall call){
+        try{TransportRules.keys(call.getData(),"pairingId","request");String id=argument(call,"pairingId");JSONObject body=call.getObject("request");
+            TransportRules.require(body!=null,"invalid_input");TransportRules.keys(body,"capability","scope_id");
+            TransportRules.require("gernze-agent-pending-cache-candidate-v1".equals(body.getString("capability")),"invalid_input");TransportRules.uuid(body.getString("scope_id"));
+            launch(call,null,id,false,job->{JSONObject r=agentAnswer(job,"/v1/agent-cache/snapshot",body);
+                TransportRules.require(r.getString("scope_id").equals(body.getString("scope_id"))&&"gernze-agent-pending-cache-candidate-v1".equals(r.getString("format"))&&Boolean.TRUE.equals(r.get("complete")),"integrity_failed");
+                return new JSObject(r.toString());});
+        }catch(Exception e){call.reject(message(errorCode(e)),errorCode(e));}
+    }
     @PluginMethod public void layerInfo(PluginCall call){
         try{TransportRules.keys(call.getData(),"pairingId");String id=argument(call,"pairingId");launch(call,null,id,false,job->new JSObject(memoryAnswer(job,"GET","/v1/layers/info",null).toString()));}
         catch(Exception e){call.reject(message(errorCode(e)),errorCode(e));}

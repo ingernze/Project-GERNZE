@@ -116,10 +116,12 @@
         const closed=width/2-(packedTotal-10+88)/2+packed[i];
         const browsed=width/2+6-thickness+(lanes[i]-origin)-weight*50;
         const x=closed+(browsed-closed)*spread;
-        const y=110+Math.abs(distance)*3-weight*66;
+        // Resting books share the physical rail baseline; lift only in flyCover after a click.
+        const floorY=goldLayout?313:Math.max(198,(stage.clientHeight||342)-31);
+        const y=floorY-198;
         book.style.transform=`translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0)`;
         book.style.zIndex=String((goldLayout?Math.round(weight*100):0)+i+1);if(book.style.getPropertyValue('--mb-thickness')!==widths[i]+'px')book.style.setProperty('--mb-thickness',widths[i]+'px');book.style.setProperty('--mb-lift',weight.toFixed(3));
-        const shadow=shadows[i];shadow.style.transform=`translate3d(${(x+weight*27).toFixed(2)}px,312px,0) scale(${((88+widths[i])/104*(1-weight*.15)).toFixed(3)},${(1+weight*.8).toFixed(3)})`;shadow.style.opacity=String(.27-weight*.12);
+        const shadow=shadows[i];shadow.style.transform=`translate3d(${(x+weight*27).toFixed(2)}px,${floorY.toFixed(2)}px,0) scale(${((88+widths[i])/104*(1-weight*.15)).toFixed(3)},${(1+weight*.8).toFixed(3)})`;shadow.style.opacity=String(.27-weight*.12);
         const pressed=String(expanded&&i===selectedIndex);if(book.getAttribute('aria-pressed')!==pressed)book.setAttribute('aria-pressed',pressed);
       });
       root.querySelector('.mb-selection').style.opacity=String(1-Math.abs(pose-selectedIndex)*.35);
@@ -311,3 +313,76 @@
   }
   global.HebaoMemoryBooks=Object.freeze({mount});
 })(window);
+
+/* Display-only collections. Original entry IDs, text and permissions stay intact. */
+(function(root){
+'use strict';
+const number=item=>{const m=/^(\d{3})\s+.+[—–－]/u.exec(item.title||'');return m?Number(m[1]):null;};
+const music=item=>item.category==='interest'&&(number(item)!==null||/红心歌单|歌单研读/u.test(item.title||''));
+// Navigation labels only: category, permission, provenance and AI eligibility are unchanged.
+function topic(item){
+ const t=item.title||'';
+ if(item.category==='course'){
+  const m=/^S(\d{2})(?:[：:\s]|原创)/u.exec(t);
+  if(m){const n=Number(m[1]);if(n===0)return '教材地图与来源';if(n>=1&&n<=3)return '数学与优化';if(n>=4&&n<=6)return '算法与数据结构';if([7,8,10].includes(n))return '系统与网络';if(n===9)return '数据库';if(n===11)return '工程实践';}
+  if(/教材|来源|实际读取|错误与机制边界/u.test(t))return '教材地图与来源';
+ }
+ if(item.category!=='encounter')return null;
+ if(/^T\d{2}(?:[：:\s])/u.test(t)||/小型数字分类|技术线阶段|误分类|最小二乘|梯度检查/u.test(t))return '莉宝的AI自学';
+ if(/^P0[23]-/u.test(t)||/表达选择|有条件表达/u.test(t))return '表达与相处';
+ if(/^P04-/u.test(t)||/回环练习/u.test(t))return '视觉与运动';
+ if(/^P01-/u.test(t))return '设计与日常物件';
+ if(/NASA|Perseverance|Mars|InSight|ocean|octopus|siphonophore/iu.test(t))return '宇宙与海洋';
+ if(/声化|OPERA|BICEP2|Planck|铋剂|准晶/u.test(t))return '科学观察与证据';
+ if(/Django|Stripe|SQLite|WebKit|Framework|VS Code|Procreate|GOV\.UK|GitHub Revert|Xbox|Chrome|Coding Quests|curl|^E0[123](?:[：:\s])|^B06优先级|幂等/u.test(t))return '软件机制与使用体验';
+ if(/STC 1390|Erddig|UiB MS|Fairphone|织补|橡木椅|旧椅|床罩|折叠伞|帕特农|胶带|婚纱|修复者/u.test(t))return '修补与继续使用';
+ if(/见闻.*(?:阶段|收尾|汇总)/u.test(t))return '见闻阶段记录';
+ return null;
+}
+function topicFolder(container,label,items,{createCard,current}){
+ const make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
+ const folder=make('details'),summary=make('summary'),cover=make('img'),copy=make('span'),title=make('strong',label+'（'+items.length+'份）'),hint=make('span','点开查看 · 可搜索标题');
+ folder.className='desktop-memory-card research-card panel';folder.style.cssText='padding:14px;margin:8px 0;border:1px solid #b6ad92;border-radius:14px';summary.style.cssText='cursor:pointer;min-height:68px';cover.src='assets/cover-10.png';cover.alt='';cover.width=44;cover.height=62;cover.style.cssText='object-fit:contain;vertical-align:middle;margin-right:12px';copy.style.cssText='display:inline-flex;flex-direction:column;gap:7px;vertical-align:middle';hint.style.fontSize='13px';copy.append(title,hint);summary.append(cover,copy);folder.append(summary);container.append(folder);
+ const content=make('div'),search=make('input'),status=make('p'),cards=make('div'),more=make('button','再看30份');search.type='search';search.maxLength=120;search.placeholder='搜索本专题标题';search.setAttribute('aria-label','搜索'+label);search.style.cssText='width:100%;box-sizing:border-box;margin:12px 0;min-height:44px';status.setAttribute('role','status');more.type='button';
+ let limit=30;const ordered=[...items].sort((a,b)=>String(a.title).localeCompare(String(b.title),'zh-CN',{numeric:true}));
+ function draw(){if(!current()||!folder.open)return;const tokens=search.value.normalize('NFKC').toLocaleLowerCase().trim().split(/\s+/u).filter(Boolean),found=ordered.filter(i=>tokens.every(t=>(i.title||'').normalize('NFKC').toLocaleLowerCase().includes(t)));status.textContent='共 '+found.length+' 份';cards.replaceChildren();for(const [i,item] of found.slice(0,limit).entries())cards.append(createCard(item,i+1));more.hidden=limit>=found.length;}
+ search.oninput=()=>{limit=30;draw();};more.onclick=()=>{limit+=30;draw();};folder.addEventListener('toggle',()=>{if(!folder.open){content.remove();cards.replaceChildren();return;}content.replaceChildren(search,status,cards,more);folder.append(content);draw();});
+}
+
+function partition(items){
+ const songs=items.filter(music),other=items.filter(item=>!music(item)),topics=new Map(),ungrouped=[];
+ for(const item of other){const label=topic(item);if(label){if(!topics.has(label))topics.set(label,[]);topics.get(label).push(item);}else ungrouped.push(item);}
+ return {songs,other,tracks:songs.filter(item=>number(item)!==null).sort((a,b)=>number(a)-number(b)||String(a.title).localeCompare(String(b.title))),notes:songs.filter(item=>number(item)===null),topics,ungrouped,rootCount:ungrouped.length+topics.size+(songs.length?1:0)};
+}
+function render(container,items,{createCard,current=()=>true}={}){
+ const data=partition(items),make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
+ container.replaceChildren();
+ if(data.songs.length){
+  const folder=make('details'),summary=make('summary'),cover=make('img'),copy=make('span'),title=make('strong','我的歌单（'+data.tracks.length+'首）'),meta=make('span',data.notes.length+'份研读记录 · 点开查看');
+  folder.className='desktop-memory-card research-card panel';folder.style.cssText='padding:14px;margin:8px 0;border:1px solid #b6ad92;border-radius:14px';
+  summary.style.cssText='cursor:pointer;min-height:68px';cover.src='assets/cover-10.png';cover.alt='';cover.width=44;cover.height=62;cover.style.cssText='object-fit:contain;vertical-align:middle;margin-right:12px';
+  copy.style.cssText='display:inline-flex;flex-direction:column;gap:7px;vertical-align:middle';meta.style.cssText='font-size:13px';copy.append(title,meta);summary.append(cover,copy);folder.append(summary);container.append(folder);
+  const content=make('div'),search=make('input'),result=make('p'),cards=make('div'),more=make('button','再看30首');
+  search.type='search';search.maxLength=120;search.placeholder='搜索歌名、歌手或编号';search.setAttribute('aria-label','搜索我的歌单');search.style.cssText='width:100%;box-sizing:border-box;margin:12px 0;min-height:44px';more.type='button';result.setAttribute('role','status');
+  let limit=30;
+  function draw(){
+   if(!current()||!folder.open)return;
+   const tokens=search.value.normalize('NFKC').toLocaleLowerCase().trim().split(/\s+/u).filter(Boolean);
+   const found=data.tracks.filter(item=>tokens.every(t=>(item.title||'').normalize('NFKC').toLocaleLowerCase().includes(t)));
+   result.textContent=tokens.length?'找到 '+found.length+' 首':'共 '+data.tracks.length+' 首 · 按歌单原编号排列';
+   cards.replaceChildren();for(const [i,item] of found.slice(0,limit).entries())cards.append(createCard(item,i+1));more.hidden=limit>=found.length;
+  }
+  search.oninput=()=>{limit=30;draw();};more.onclick=()=>{limit+=30;draw();};
+  folder.addEventListener('toggle',()=>{
+   if(!folder.open){content.remove();cards.replaceChildren();return;}
+   content.replaceChildren(search,result,cards,more);
+   if(data.notes.length){const notes=make('details'),label=make('summary','歌单研读记录（'+data.notes.length+'份）');notes.append(label);notes.addEventListener('toggle',()=>{for(const child of [...notes.children].slice(1))child.remove();if(notes.open&&current())for(const [i,item] of data.notes.entries())notes.append(createCard(item,i+1));});content.append(notes);}
+   folder.append(content);draw();
+  });
+ }
+ for(const [label,items] of data.topics)topicFolder(container,label,items,{createCard,current});
+ for(const [i,item] of data.ungrouped.entries())container.append(createCard(item,i+1));
+ return data;
+}
+root.GernzeShelfCollections=Object.freeze({partition,render});
+})(typeof window==='object'?window:globalThis);

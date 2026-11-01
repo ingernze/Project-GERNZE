@@ -1,3 +1,4 @@
+import '../../src/workbench/static/task-progress.js';
 import {Capacitor,registerPlugin} from '@capacitor/core';
 import {App} from '@capacitor/app';
 import {createUpdateTransport} from './update-transport.mjs';
@@ -10,7 +11,7 @@ export function mountUpdates(){
   const panel=document.createElement('section');panel.id='hebaoUpdates';panel.className='panel';
   panel.innerHTML=`<h3>电脑更新</h3><p id="updateVersion" class="hint">读取当前版本…</p>
     <p id="updatePeer" class="hint">还没有配对电脑。</p><p id="updateStatus" role="status" aria-live="polite"></p>
-    <progress id="updateProgress" max="1" value="0" hidden style="width:100%"></progress>
+    <div id="updateProgress" hidden></div>
     <div class="update-buttons" style="display:flex;flex-wrap:wrap;gap:8px">
       <button type="button" id="updateScan">扫描电脑二维码</button><button type="button" id="updateCheck">检查更新</button>
       <button type="button" id="updateDownload" hidden>下载更新</button><button type="button" id="updateCancel" hidden>取消下载</button>
@@ -25,11 +26,12 @@ export function mountUpdates(){
     </dialog>`;
   page.querySelector('#qualityForm').after(panel);
   const $=id=>panel.querySelector('#'+id);
+  const progress=window.GernzeTaskProgress.mount($('updateProgress'),{label:'下载更新'});
   $('updateLicenses').addEventListener('toggle',async()=>{if(!$('updateLicenses').open||$('updateLicenseText').dataset.loaded)return;try{const response=await fetch('updates-notices.txt');if(!response.ok)throw Error();$('updateLicenseText').textContent=await response.text();$('updateLicenseText').dataset.loaded='1';}catch{$('updateLicenseText').textContent='许可文件暂未加载，可重开后查看。';}});
   const native=Capacitor.isNativePlatform()&&Capacitor.getPlatform()==='android';
   if(!native){$('updateVersion').textContent='此功能在手机安装版中使用。';$('updateStatus').textContent='电脑发布更新后，手机莉宝通过热点接收。';panel.querySelectorAll('button,input').forEach(el=>el.disabled=true);return;}
-  let identityAnswer=null;
-  const answer=value=>{const resolve=identityAnswer;identityAnswer=null;$('updateIdentity').close();resolve?.(value);};
+  let identityAnswer=null,closed=false;
+  const answer=value=>{const resolve=identityAnswer;identityAnswer=null;if($('updateIdentity').open)$('updateIdentity').close();resolve?.(value);};
   $('updateIdentityConfirm').onclick=()=>answer(true);$('updateIdentityCancel').onclick=()=>answer(false);
   $('updateIdentity').addEventListener('cancel',e=>{e.preventDefault();answer(false);});
   const controller=createUpdateController({transport:createUpdateTransport(),installer:updateInstaller,scanner,storage:localStorage,
@@ -38,6 +40,7 @@ export function mountUpdates(){
       $('updateIdentityHash').textContent=peer.fingerprint.match(/.{1,4}/g).join(' ');
       identityAnswer=resolve;$('updateIdentity').showModal();
     }),onChange:state=>{
+      if(closed)return;
       $('updateVersion').textContent=state.installed?`当前版本 ${state.installed.versionName}`:'正在读取当前版本…';
       $('updatePeer').textContent=state.pair?`已配对电脑 ${state.pair.host}:${state.pair.port}`:'还没有配对电脑。';
       $('updateStatus').textContent=state.message;
@@ -45,7 +48,9 @@ export function mountUpdates(){
       $('updateCheck').disabled=state.busy||!state.pair||!!state.ready;
       $('updateDownload').hidden=state.phase!=='available';$('updateDownload').disabled=state.busy;
       $('updateCancel').hidden=state.phase!=='downloading';$('updateCancel').disabled=false;
-      $('updateProgress').hidden=state.phase!=='downloading';$('updateProgress').value=state.progress;
+      $('updateProgress').hidden=!['downloading','verifying','ready'].includes(state.phase)&&!(state.phase==='error'&&state.progress>0);
+      const bytes=state.phase==='downloading'&&state.totalBytes>0?`已下载 ${(state.receivedBytes/1048576).toFixed(2)} / ${(state.totalBytes/1048576).toFixed(2)} MB · `:'';
+      progress.update({state:state.phase==='error'?'error':state.phase==='ready'?'complete':'running',value:['verifying','ready'].includes(state.phase)?1:state.progress,label:'下载更新',detail:bytes+state.message});
       $('updateInstall').hidden=!state.ready;$('updateInstall').disabled=state.busy||state.phase==='awaiting_user';
       $('updatePermission').hidden=!state.ready||state.permission;$('updatePermission').disabled=state.busy;
       $('updateDiscard').hidden=!state.ready;$('updateDiscard').disabled=state.busy||state.phase==='awaiting_user';
@@ -62,6 +67,7 @@ export function mountUpdates(){
   };
   void controller.init();
   let appListener;
-  void App.addListener('appStateChange',e=>{if(e.isActive)void controller.resume().catch(()=>{});}).then(h=>appListener=h);
-  window.addEventListener('pagehide',()=>{answer(false);void controller.destroy();void appListener?.remove();},{once:true});
+  void App.addListener('appStateChange',e=>{if(!closed&&e.isActive)void controller.resume().catch(()=>{});})
+    .then(h=>{if(closed)void h.remove();else appListener=h;}).catch(()=>{});
+  window.addEventListener('pagehide',()=>{closed=true;answer(false);progress.destroy();panel.remove();void controller.destroy();void appListener?.remove();},{once:true});
 }

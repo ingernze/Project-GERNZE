@@ -3,7 +3,8 @@ const format='gernze-phone-raw-v1',zero='0'.repeat(64);
 const hash=async value=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(canonical(value)))),b=>b.toString(16).padStart(2,'0')).join('');
 const size=v=>new TextEncoder().encode(JSON.stringify(v)).length;
 export async function uploadPhoneRaw({journal,send,eligible=()=>true,onProgress=()=>{},maxBatches=20}){
- const sessions=(await journal.list()).filter(s=>s.messages.length).sort((a,b)=>a.id.localeCompare(b.id));let batches=0,uploaded=0,total=0;
+ const all=await journal.list(),researchDeferred=all.filter(s=>s.researchRanges?.length).length;
+ const sessions=all.map(s=>{const end=s.researchRanges?.length?Math.min(...s.researchRanges.map(r=>r.start)):s.messages.length;return {...s,messages:s.messages.slice(0,end),messageTimes:s.messageTimes?.slice(0,end)};}).filter(s=>s.messages.length).sort((a,b)=>a.id.localeCompare(b.id));let batches=0,uploaded=0,total=0;
  for(const s of sessions){
   total+=s.messages.length/2;if(!eligible())throw Error('已暂停，回到前台后继续同步原文。');
   const turn=i=>({index:i,user:s.messages[i*2].content,assistant:s.messages[i*2+1].content,userAt:s.messageTimes?.[i*2]??null,assistantAt:s.messageTimes?.[i*2+1]??null});
@@ -24,5 +25,5 @@ export async function uploadPhoneRaw({journal,send,eligible=()=>true,onProgress=
    uploaded+=block.length;batches++;onProgress({uploaded});
   }
  }
- return {complete:true,uploaded,total};
+ return {complete:researchDeferred===0,uploaded,total,researchDeferred};
 }
