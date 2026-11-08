@@ -14,12 +14,14 @@ function mount(host,{scope,call,onChange=()=>{},onOpen=()=>{},onStudy=null,onRes
   const shell=h('div','desktop-books-shell'),bookHost=h('div','desktop-books-host'),unknown=h('details','desktop-undated');unknown.append(h('summary','','日期不明的原文'));bookHost.dataset.memoryLayout='gold';const archiveNotice=h('div','desktop-archive-notice');archiveNotice.hidden=true;archiveNotice.setAttribute('role','status');shell.append(bookHost,archiveNotice,unknown);overlay.append(shell);
   const shelfHeading=h('div','research-heading'),shelfTitle=h('h2','','记忆书架'),shelfClose=h('button','scene-button','返回');shelfClose.type='button';const categoryToggle=h('button','scene-button research-category-toggle','分类资料 ▾');categoryToggle.type='button';categoryToggle.setAttribute('aria-expanded','false');shelfHeading.append(shelfTitle,categoryToggle,shelfClose);
   const categoryNav=h('nav','research-categories');categoryNav.setAttribute('aria-label','记忆分类');categoryNav.id='memory-categories-'+(++shelfSerial);categoryNav.hidden=true;categoryToggle.setAttribute('aria-controls',categoryNav.id);
-  const categoryLabels={approved:'聊天积累的已审记忆',encounter:'莉宝的见闻与兴趣',interest:'关于你的兴趣专题',course:'大学课程资料'};
+  const categoryLabels={approved:'聊天积累的已审记忆',encounter:'莉宝的见闻与兴趣',interest:'关于你的兴趣专题',course:'大学课程资料',knowledge:'项目知识库'};
   const categoryButtons=new Map();for(const [id,label] of Object.entries(categoryLabels)){const b=h('button','scene-button',label);b.type='button';b.dataset.category=id;b.setAttribute('aria-pressed','false');categoryButtons.set(id,b);categoryNav.append(b);}
   const archiveButton=h('button','scene-button research-archive-button','按日期翻看原文');archiveButton.type='button';categoryNav.append(archiveButton);
   const researchPanel=h('section','research-panel'),researchHint=h('p','subtle'),researchState=h('p','scene-status'),researchRows=h('div','research-rows'),researchMore=h('button','scene-button','继续查看');researchState.role='status';researchMore.type='button';researchMore.hidden=true;researchPanel.append(researchHint,researchState,researchRows,researchMore);
   const shelfSyncState=h('p','scene-status research-sync-state');shelfSyncState.hidden=true;shelfSyncState.setAttribute('role','status');shell.prepend(shelfHeading,shelfSyncState,categoryNav,researchPanel);bookHost.hidden=true;unknown.hidden=true;
-  let undatedVersion=0;
+  let undatedVersion=0,knowledgeView=null;
+  const reading=root.GernzeReadingTools?.createSession({host:researchRows});
+  function clearKnowledge(){knowledgeView?.destroy();knowledgeView=null;}
   let categoryVersion=0,overviewVersion=0,overviewReady=Promise.resolve(),categorySignal=null,selectedCategory='archive',nextCategoryPage=null,studyAvailable=false,researchAvailable=false;
   const shelfSize=new ResizeObserver(()=>{const width=bookHost.clientWidth;if(!disposed&&width>0)bookHost.style.setProperty('--memory-shelf-scale',String(Math.min(1,width/520)));});shelfSize.observe(bookHost);scope.own(()=>shelfSize.disconnect());
   const sceneRoom=host.querySelector('.scene-room');if(sceneRoom){overlay.classList.add('desktop-books-focus');sceneRoom.append(overlay);}else host.append(overlay);
@@ -75,6 +77,7 @@ function mount(host,{scope,call,onChange=()=>{},onOpen=()=>{},onStudy=null,onRes
     cancel.onclick=()=>form.remove();form.onsubmit=ev=>{ev.preventDefault();if(!input.value.trim())return;if(fromPending)mutate('chat.layers.decide',{decisions:[{key:e.key,revision:e.revision,action:'correct',text:input.value}]});else mutate('chat.layers.correct',{key:e.key,revision:e.revision,text:input.value});};
   }
   async function reload(){const n=++version;
+    reading?.clear();
     if(bookshelfOnly){
       if(!overlay.hidden){loadCategoryOverview();showCategory(selectedCategory);}
       return;
@@ -96,7 +99,7 @@ function mount(host,{scope,call,onChange=()=>{},onOpen=()=>{},onStudy=null,onRes
     }catch(e){if(!disposed&&n===version)state.textContent=e.message||'保存状态未读取，请重试。';}
   }
   function toggleCategories(value){categoryNav.hidden=!value;categoryToggle.setAttribute('aria-expanded',String(value));}
-  function closeBooks(){if(overlay.hidden)return;overlay.hidden=true;toggleCategories(false);undatedVersion++;categoryVersion++;overviewVersion++;categorySignal?.abort();researchRows.replaceChildren();unknown.querySelector('.desktop-undated-content')?.remove();sceneRoom?.classList.remove('is-books-focused');books?.setVisible(false);returnFocus?.focus();}
+  function closeBooks(){if(overlay.hidden)return;reading?.suspend();clearKnowledge();overlay.hidden=true;toggleCategories(false);undatedVersion++;categoryVersion++;overviewVersion++;categorySignal?.abort();researchRows.replaceChildren();unknown.querySelector('.desktop-undated-content')?.remove();sceneRoom?.classList.remove('is-books-focused');books?.setVisible(false);returnFocus?.focus();}
   const source={listMonths:({signal})=>call('chat.books.months',{},signal),listDays:({month,signal})=>call('chat.books.days',{month},signal),loadDay:({day,signal})=>call('chat.books.day',{day},signal)};
   function loadCategoryOverview(){const n=++overviewVersion;overviewReady=(async()=>{try{const value=await call('chat.research.groups',{},signal.signal);if(disposed||overlay.hidden||n!==overviewVersion)return;shelfSyncState.hidden=value.shelfSync?.state!=='waiting';shelfSyncState.textContent=shelfSyncState.hidden?'':value.shelfSync.message;for(const item of value.groups||[]){const b=categoryButtons.get(item.id);if(b)b.textContent=categoryLabels[item.id]+(item.id==='interest'?'':'（'+item.count+'）');}}catch(e){if(!disposed&&!overlay.hidden&&n===overviewVersion){shelfSyncState.hidden=false;shelfSyncState.textContent='分类资料暂未取回，保留原书架；重新打开后重试。';}}})();return overviewReady;}
   function categoryCard(item,index,n,category){
@@ -106,13 +109,23 @@ function mount(host,{scope,call,onChange=()=>{},onOpen=()=>{},onStudy=null,onRes
     const review={reported_reviewed:'交付方记录：报告已审读',reported_verified:'交付方记录：局部验证通过',partial:'交付方记录：部分完成',unverified:'尚无核验记录'};
     if(item.reviewStatus)row.append(h('p','subtle',review[item.reviewStatus]||'核验范围待确认'));
     if(item.reviewScope)row.append(h('p','subtle',item.reviewScope));
-    const button=action(row,category==='course'?'查看课程资料':'查看内容',async()=>{
-      const old=row.querySelector('.research-body');if(old){old.remove();button.textContent=category==='course'?'查看课程资料':'查看内容';return;}
-      button.disabled=true;button.textContent='正在读取…';
-      try{const value=await call('chat.research.read',{category,id:item.id,revision:item.revision,purpose:category==='course'?'study_material':'browse'},categorySignal.signal);if(disposed||overlay.hidden||n!==categoryVersion||!row.isConnected)return;
-        row.append(h('p','desktop-memory-body research-body',value.body));button.textContent='收起内容';
-      }catch(e){if(!disposed&&!overlay.hidden&&n===categoryVersion){button.textContent=category==='course'?'查看课程资料':'查看内容';researchState.textContent=e.message||'资料没有读取成功，请刷新分类。';}}
-      finally{if(!disposed&&n===categoryVersion)button.disabled=false;}
+    let reader=null,pending=null,readVersion=0,unwatch=null;
+    const label=category==='course'?'查看课程资料':'查看内容';
+    const current=()=>!disposed&&!overlay.hidden&&n===categoryVersion&&root.GernzeReadingTools?.visible(row);
+    const close=()=>{readVersion++;pending?.abort();pending=null;unwatch?.();unwatch=null;reader?.destroy();reader=null;button.textContent=label;button.removeAttribute('aria-busy');};
+    const button=action(row,label,async()=>{
+      if(reader||pending){close();button.focus({preventScroll:true});return;}
+      if(!reading){researchState.textContent='阅读组件未加载，请重新打开工作台。';return;}
+      const ticket=++readVersion,request=new AbortController(),parent=categorySignal.signal;
+      const cancel=()=>request.abort();parent.addEventListener('abort',cancel,{once:true});pending=request;
+      unwatch=reading.watch(row,close);button.textContent='取消读取';button.setAttribute('aria-busy','true');
+      try{const value=await call('chat.research.read',{category,id:item.id,revision:item.revision,purpose:category==='course'?'study_material':'browse'},request.signal);
+        if(ticket!==readVersion||request.signal.aborted||!current())return;
+        if(value?.id!==item.id||value?.revision!==item.revision||typeof value.body!=='string')throw Error('资料已变化，请重新打开此分类。');
+        unwatch?.();unwatch=null;
+        reader=reading.mount(row,{id:item.id,namespace:category,revision:item.revision,body:value.body,metadata:{title:item.title,trust:value.trust,review:item.reviewStatus,reviewScope:item.reviewScope,sourceCount:value.sourceCount},current,onClose:()=>{close();if(current())button.focus({preventScroll:true});}});button.textContent='收起内容';
+      }catch(e){if(ticket===readVersion&&current()){button.textContent=label;researchState.textContent=e.message||'资料没有读取成功，请重试。';}}
+      finally{parent.removeEventListener('abort',cancel);if(ticket===readVersion){pending=null;unwatch?.();unwatch=null;button.removeAttribute('aria-busy');}}
     });
     if(item.state!=='active'){button.disabled=true;button.textContent='来源变化或有冲突，暂不读取';}
     const choose=category==='course'&&studyAvailable?onStudy:['encounter','interest'].includes(category)&&researchAvailable?onResearch:null;
@@ -123,7 +136,7 @@ function mount(host,{scope,call,onChange=()=>{},onOpen=()=>{},onStudy=null,onRes
     return row;
   }
   async function showCategory(category,append=false){
-    if(disposed||overlay.hidden)return;selectedCategory=category;shell.dataset.category=category;categoryToggle.textContent=category==='archive'?'分类资料 ▾':categoryLabels[category]+' ▾';if(!append){categorySignal?.abort();categorySignal=new AbortController();categoryVersion++;}const n=categoryVersion,readSignal=categorySignal.signal;
+    if(disposed||overlay.hidden)return;reading?.suspend();clearKnowledge();selectedCategory=category;shell.dataset.category=category;categoryToggle.textContent=category==='archive'?'分类资料 ▾':categoryLabels[category]+' ▾';if(!append){categorySignal?.abort();categorySignal=new AbortController();categoryVersion++;}const n=categoryVersion,readSignal=categorySignal.signal;
     for(const [id,b] of categoryButtons)b.setAttribute('aria-pressed',String(id===category));archiveButton.setAttribute('aria-pressed',String(category==='archive'));
     books?.setVisible(false);bookHost.hidden=true;archiveNotice.hidden=true;archiveNotice.replaceChildren();undatedVersion++;unknown.hidden=true;unknown.open=false;unknown.querySelector('.desktop-undated-content')?.remove();researchPanel.hidden=category==='archive';
     if(category==='archive'){
@@ -132,6 +145,14 @@ function mount(host,{scope,call,onChange=()=>{},onOpen=()=>{},onStudy=null,onRes
       await books.open();
       if(disposed||overlay.hidden||n!==categoryVersion)return;
       try{const s=await call('chat.books.status',{},readSignal);if(disposed||overlay.hidden||n!==categoryVersion)return;unknown.hidden=!s.undatedEntries;unknown.firstElementChild.textContent='日期不明的原文（'+s.undatedEntries+'）';}catch(e){if(!disposed&&!overlay.hidden&&n===categoryVersion){archiveNotice.replaceChildren(h('span','','日期信息暂未取回，月册仍可正常查看。'));action(archiveNotice,'重试日期信息',()=>showCategory('archive'));archiveNotice.hidden=false;}}
+      return;
+    }
+    if(category==='knowledge'){
+      researchRows.replaceChildren();researchHint.textContent='工作模式整理的资料，只供查看；不发送给聊天模型。';researchState.textContent='';researchMore.hidden=true;
+      if(!root.GernzeKnowledgeBooks){researchState.textContent='知识书架组件暂未加载，请重新打开工作台。';return;}
+      knowledgeView=root.GernzeKnowledgeBooks.mount(researchRows,{call:(command,params,requestSignal)=>call(command,params,requestSignal)});
+      await knowledgeView.ready;
+      if(!disposed&&n===categoryVersion)researchRows.setAttribute('aria-busy','false');
       return;
     }
     if(!append){researchRows.replaceChildren();nextCategoryPage=null;}
@@ -183,7 +204,9 @@ function mount(host,{scope,call,onChange=()=>{},onOpen=()=>{},onStudy=null,onRes
   scope.listen(autoNow,'click',()=>mutate('chat.layers.auto_review.run',{}));
   scope.listen(copy,'click',async()=>{await reload();if(disposed||!snapshot)return;const packet={format:'hebao-memory-review-v1',entries:snapshot.pending};try{await navigator.clipboard.writeText(JSON.stringify(packet,null,2));if(!disposed)state.textContent='已复制待审摘要与原文来源，不含第一、第二层。';}catch{if(disposed)return;decisions.value=JSON.stringify(packet,null,2);importBox.open=true;state.textContent='待审包已放在文本框，可手动复制。';}});
   scope.listen(apply,'click',()=>{try{const data=JSON.parse(decisions.value);if(data.format!=='hebao-memory-decisions-v1'||!Array.isArray(data.decisions))throw Error('审查结果格式应为 hebao-memory-decisions-v1。');mutate('chat.layers.decide',{decisions:data.decisions});}catch(e){state.textContent=e.message;}});
-  scope.own(()=>{disposed=true;version++;categoryVersion++;categorySignal?.abort();clearTimeout(reviewTimer);reviewProgress?.destroy();signal.abort();sceneRoom?.classList.remove('is-books-focused');books?.destroy();overlay.remove();panel.remove();});
+  scope.listen(window,'pagehide',()=>reading?.clear());
+  scope.listen(window,'hebao:pairing-changed',()=>reading?.clear());
+  scope.own(()=>{reading?.destroy();clearKnowledge();disposed=true;version++;categoryVersion++;categorySignal?.abort();clearTimeout(reviewTimer);reviewProgress?.destroy();signal.abort();sceneRoom?.classList.remove('is-books-focused');books?.destroy();overlay.remove();panel.remove();});
   if(settingsOnly){heading.firstElementChild.textContent='分层记忆与保存状态';open.textContent='查看记忆书架';}
   reload();return Object.freeze({open:openBooks,close:closeBooks,refresh:reload});
 }

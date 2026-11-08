@@ -19,6 +19,7 @@ import subprocess
 import threading
 import time
 import uuid
+from apk_delta import DeltaSource, CONTENT_TYPE
 
 from event_outbox import AuthenticatedPeer, EventError
 from codex_tasks import CodexTasks
@@ -164,6 +165,7 @@ class Publisher:
             db.execute('CREATE TABLE IF NOT EXISTS authorizations (pairing_id TEXT PRIMARY KEY,device_id TEXT NOT NULL,token_hash TEXT NOT NULL,revoked INTEGER NOT NULL)')
         if os.name!='nt':os.chmod(self.db_path,0o600)
         self.snapshot=self.freeze(Path(apk))
+        self.delta=DeltaSource(self.snapshot,self.release)
         # Use descriptor metadata on both sides; Windows path stat and fstat
         # can disagree on ctime even for an unchanged, correctly hashed file.
         with regular_open(self.snapshot) as frozen:
@@ -362,6 +364,24 @@ class Handler(BaseHTTPRequestHandler):
             self.check_headers(True)
             require(self.headers.get('Content-Type')=='application/json')
             length=self.headers.get('Content-Length','');require(re.fullmatch(r'0|[1-9][0-9]{0,7}',length) is not None)
+            if self.path=='/v1/apk-delta':
+                pair_id,token=self.credentials()
+                require(self.headers.get('Range') is None,'range_not_supported')
+                n=int(length);require(0<n<=1024)
+                raw=self.rfile.read(n);require(len(raw)==n)
+                p=self.server.publisher
+                try:plan=p.delta.prepare(parse(raw,1024))
+                except ValueError:raise Error('invalid_input') from None
+                if plan is None:self.reply(409,{'code':'delta_unavailable'});return
+                require(p.authorized(pair_id,token),'authentication_failed')
+                self.send_response(200);self.send_header('Content-Type',CONTENT_TYPE)
+                self.send_header('Content-Length',str(plan.wire_size))
+                self.send_header('ETag','"'+p.release['sha256']+'"')
+                self.send_header('Connection','close');self.send_header('Cache-Control','no-store');self.end_headers();self.close_connection=True
+                def check_delta():
+                    require(not p.stopping.is_set() and p.authorized(pair_id,token),'authentication_failed')
+                for block in plan.blocks(check_delta):self.wfile.write(block)
+                return
             memory_route=self.path in ('/v1/raw/exchange','/v1/memory/exchange','/v1/memory/decide','/v1/layers/exchange','/v1/layers/decide')
             codex_route=self.path in ('/v1/codex/subscription','/v1/codex/events','/v1/codex/ack')
             agent_route=self.path=='/v1/agent-cache/snapshot'
@@ -401,7 +421,7 @@ class Handler(BaseHTTPRequestHandler):
                     else:result=PhoneArchive(journal).exchange(device,body)
                     result['serverId']=p.server_id
                 else:result=p.layers().exchange(body,peer_device=device)
-                if self.path=='/v1/layers/exchange' and type(body) is dict and 'bookshelf' in body:self.credentials()
+                if self.path=='/v1/layers/exchange' and type(body) is dict and ('bookshelf' in body or 'knowledge' in body):self.credentials()
                 self.reply(200,result)
             elif self.path=='/v1/layers/decide':self.reply(200,self.server.publisher.layers().decide(body))
             elif self.path=='/v1/memory/exchange':self.reply(200,self.server.publisher.memories().exchange(body))

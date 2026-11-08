@@ -87,3 +87,31 @@
 /* V10: real artwork image belongs to BOTH the active shelf cover and the moving cover. */
 .mb-books .mb-cover>.mb-cover-art{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:none;max-height:none;object-fit:fill;z-index:0;border:0;margin:0;padding:0;opacity:1;visibility:visible;pointer-events:none;user-select:none;-webkit-user-drag:none}
 .mb-books .mb-cover-top,.mb-books .mb-cover-year,.mb-books .mb-cover-name{z-index:2;pointer-events:none}
+
+/* READ-01: only the shared classified-text reader. */
+.gr-reader { color:#334f60; background:#f6f1e6; border:1px solid #b6ad92; border-radius:12px; padding:12px; margin-top:10px; min-width:0; max-width:100%; box-sizing:border-box; overflow-wrap:anywhere; }
+.gr-reader .gr-heading,.gr-reader .gr-controls { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.gr-reader .gr-title { flex:1 1 180px; min-width:0; white-space:pre-wrap; }
+.gr-reader button { min-height:44px; min-width:44px; padding:7px 10px; border:1px solid #b6ad92; border-radius:9px; background:#e8e0ca; color:#334f60; cursor:pointer; font:inherit; }
+.gr-reader button:disabled { opacity:.58; cursor:default; }
+.gr-reader :focus-visible { outline:2px solid #647b85; outline-offset:2px; }
+.gr-reader .gr-info,.gr-reader .gr-provenance,.gr-reader .gr-status { font-size:12px; line-height:1.6; }
+.gr-reader .gr-info p { margin:5px 0; }
+.gr-reader .gr-provenance { margin:8px 0; }
+.gr-reader .gr-provenance summary { cursor:pointer; min-height:44px; display:flex; align-items:center; }
+.gr-reader .gr-search-label { color:#334f60; display:block; font-size:13px; margin:10px 0 6px; }
+.gr-reader .gr-query,.gr-reader .gr-fallback textarea { display:block; width:100%; max-width:100%; min-width:0; min-height:44px; box-sizing:border-box; resize:vertical; font:inherit; color:#334f60; background:#fffaf0; border:1px solid #b6ad92; border-radius:8px; padding:9px; }
+.gr-reader .gr-count { font-size:12px; }
+.gr-reader .gr-paper { white-space:pre-wrap; overflow-wrap:anywhere; word-break:normal; line-height:1.8; max-height:52vh; max-height:min(52vh,520px); min-height:48px; overflow:auto; overscroll-behavior:contain; padding:10px 6px; margin-top:8px; border-top:1px solid #c8bea5; tab-size:4; user-select:text; -webkit-user-select:text; }
+.gr-reader .gr-match { background:#f0d98c; color:#223d4a; outline:1px solid #a17b22; }
+.gr-reader .gr-fallback[hidden] { display:none; }
+.gr-reader .gr-fallback textarea { margin:8px 0; }
+@media(max-height:450px) { .gr-reader .gr-paper { max-height:44vh; } }
+
+.gr-reader .gr-title { max-height:6em; overflow:auto; line-height:1.5; }
+
+.gr-reader .gr-manual { white-space:pre-wrap; overflow-wrap:anywhere; max-height:180px; overflow:auto; padding:10px; font:inherit; border:1px solid #b6ad92; background:#fffaf0; user-select:text; -webkit-user-select:text; }
+
+/* FE-03: shared stylesheet, mobile host only; desktop rules stay untouched. */
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .gr-reader .gr-paper { max-height:max(140px,calc(var(--dialogue-viewport-height,100vh) - 152px)); }
+.hebao-dialogue .gr-reader .gr-paper { overflow-anchor:none; }

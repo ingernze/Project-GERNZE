@@ -1,0 +1,40 @@
+/* Local topicFolder adaptation; all rules stay inside the knowledge instance. */
+.kb-books{box-sizing:border-box;min-width:0;max-width:100%;padding:12px;color:var(--hebao-ink,#304859);background:var(--hebao-surface,#faf7f0);border:1px solid var(--hebao-card-line,#b6ad92);border-radius:14px;font:15px/1.65 "Songti SC",SimSun,serif}
+.kb-books *{box-sizing:border-box;min-width:0}
+.kb-books [hidden]{display:none!important}
+.kb-books .kb-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.kb-books h2{margin:0;font-size:22px;font-weight:500;letter-spacing:.1em}
+.kb-books .kb-eyebrow{margin:0;font-size:12px;color:var(--hebao-muted,#748087)}
+.kb-books .kb-hint,.kb-books .kb-status{margin:10px 0;font-size:13px;color:var(--hebao-soft,#566a7b);overflow-wrap:anywhere}
+.kb-books .kb-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.kb-books .kb-toolbar label{display:flex;flex-direction:column;gap:4px;font-size:13px;flex:1 1 150px}
+.kb-books .kb-toolbar .kb-title-search{flex:2 1 210px}
+.kb-books select,.kb-books input{width:100%;max-width:100%;min-height:44px;padding:7px 9px;border:1px solid var(--hebao-control-line,#b6ad92);border-radius:9px;background:var(--hebao-input,#fcfaf4);color:inherit;font:inherit}
+.kb-books .kb-button{min-height:44px;white-space:normal;overflow-wrap:anywhere;padding:7px 12px;border:1px solid var(--hebao-control-line,#b6ad92);border-radius:10px;background:var(--hebao-quiet-surface,#eee9df);color:inherit;font:inherit;cursor:pointer}
+.kb-books .kb-button:disabled{opacity:.65;cursor:default}
+.kb-books :is(button,input,select,summary):focus-visible{outline:2px solid var(--hebao-accent,#a68c5d);outline-offset:3px}
+.kb-books .kb-shelf{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(290px,100%),1fr));gap:12px;align-items:start;margin:12px 0}
+.kb-books .kb-book{margin:0;padding:14px;border:1px solid #b6ad92;border-radius:14px;background:var(--hebao-detail-surface,#f6f1e7);box-shadow:0 3px 0 #b6ad9255}
+.kb-books .kb-book[open]{grid-column:1/-1}
+.kb-books .kb-book-summary{display:flex;align-items:end;gap:12px;min-height:76px;padding:0 0 10px;cursor:pointer;list-style:none;border-bottom:3px solid var(--hebao-accent,#a68c5d)}
+.kb-books .kb-book-summary::-webkit-details-marker{display:none}
+.kb-books .kb-cover{display:block;flex:none;width:44px;height:62px;border:1px solid #b6ad92;border-left:4px solid #49615f;border-radius:2px 4px 4px 2px;background:#647b77;box-shadow:2px 0 0 #e7e0cb}
+.kb-books .kb-cover img{display:block;width:40px;height:60px;object-fit:contain}
+.kb-books .kb-book-copy{display:flex;flex:1;flex-direction:column;gap:3px;overflow-wrap:anywhere}
+.kb-books .kb-book-title{font-size:16px;font-weight:500}
+.kb-books .kb-book-title::before{content:'▸ ';color:var(--hebao-accent,#a68c5d)}
+.kb-books .kb-book[open] .kb-book-title::before{content:'▾ '}
+.kb-books .kb-book-meta,.kb-books .kb-entry-meta,.kb-books .kb-entry-count{font:12px/1.6 system-ui,sans-serif;color:var(--hebao-soft,#566a7b)}
+.kb-books .kb-entries{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:10px}
+.kb-books .kb-entry{border:1px solid var(--hebao-line,#b4a28147);border-radius:10px;padding:10px;overflow-wrap:anywhere}
+.kb-books .kb-entry .kb-button{width:100%;text-align:left}
+.kb-books .kb-entry [aria-current=true]{outline:2px solid var(--hebao-accent,#a68c5d)}
+.kb-books .kb-entry p{margin:5px 0 0}
+.kb-books .kb-pager{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0 0}
+.kb-books .kb-reader{margin:14px 0 0;border:1px solid #b6ad92;border-radius:14px;padding:16px;background:var(--hebao-input,#fcfaf4);overflow-wrap:anywhere}
+.kb-books .kb-reader h3{font-size:19px;line-height:1.7;margin:12px 0}
+.kb-books .kb-provenance{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font:12px/1.7 system-ui,sans-serif;color:var(--hebao-soft,#566a7b)}
+.kb-books .kb-provenance dt,.kb-books .kb-provenance dd{margin:0;overflow-wrap:anywhere}
+.kb-books .kb-body{white-space:pre-wrap;overflow-wrap:anywhere;margin:16px 0 0;font:16px/1.9 "Songti SC",SimSun,serif;color:inherit}
+.kb-books .kb-notice,.kb-books .kb-empty{overflow-wrap:anywhere}
+@media(max-width:500px){.kb-books{padding:10px}.kb-books .kb-heading{align-items:start}.kb-books h2{font-size:19px}.kb-books .kb-provenance{grid-template-columns:1fr}.kb-books .kb-provenance dd{padding-bottom:6px}.kb-books .kb-reader{padding:12px}}

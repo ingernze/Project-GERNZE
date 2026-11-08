@@ -328,6 +328,7 @@ function topic(item){
   if(/教材|来源|实际读取|错误与机制边界/u.test(t))return '教材地图与来源';
  }
  if(item.category!=='encounter')return null;
+ const kimi=/^Kimi【([^】]{1,20})】/u.exec(t);if(kimi)return 'Kimi · '+kimi[1];
  if(/^T\d{2}(?:[：:\s])/u.test(t)||/小型数字分类|技术线阶段|误分类|最小二乘|梯度检查/u.test(t))return '莉宝的AI自学';
  if(/^P0[23]-/u.test(t)||/表达选择|有条件表达/u.test(t))return '表达与相处';
  if(/^P04-/u.test(t)||/回环练习/u.test(t))return '视觉与运动';
@@ -386,3 +387,98 @@ function render(container,items,{createCard,current=()=>true}={}){
 }
 root.GernzeShelfCollections=Object.freeze({partition,render});
 })(typeof window==='object'?window:globalThis);
+
+/* READ-01: human-only, mount-scoped plain-text reader. No data access/storage. */
+(function(root){
+'use strict';
+function visible(node){
+ if(!node?.isConnected)return false;
+ for(let p=node;p&&p!==document.body;p=p.parentElement){if(p.hidden||(p.tagName==='DETAILS'&&!p.open))return false;}
+ return true;
+}
+function createSession({host,limit=32}={}){
+ const positions=new Map(),watches=new Set();let dead=false;
+ function watch(node,dispose){const entry={node,dispose};watches.add(entry);return ()=>watches.delete(entry);}
+ // One observer per shelf, including ancestor visibility transitions. Records
+ // retain A->B->A transitions even when final visibility is unchanged.
+ const observer=new MutationObserver(records=>{
+  for(const entry of [...watches]){
+   const crossed=records.some(r=>r.type==='attributes'&&r.target.contains(entry.node)&&((r.attributeName==='hidden'&&r.oldValue===null)||(r.attributeName==='open'&&r.oldValue!==null)));
+   if(crossed||!visible(entry.node)){watches.delete(entry);entry.dispose();}
+  }
+ });
+ observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeOldValue:true,attributeFilter:['hidden','open']});
+ function suspend(){for(const e of [...watches]){watches.delete(e);e.dispose();}}
+ function clear(){suspend();positions.clear();}
+ function mount(container,{id,revision,namespace='',body,metadata={},onClose=()=>{},current=()=>true}={}){
+  if(dead||typeof body!=='string'||!id||!revision)throw Error('正文阅读信息不完整。');
+  const key=JSON.stringify([namespace,id,revision]);
+  // A new revision discards previous positioning for this ID, never its text.
+  for(const [k,v] of positions)if(v.id===id&&v.namespace===namespace&&k!==key)positions.delete(k);
+  const prior=positions.get(key),events=new AbortController();let closed=false,copyVersion=0,frame=null,text=body,hits=[],selected=prior?.selected||0;
+  // Normalize line endings only in the search index; preserve raw offsets.
+  let searchable='',starts=[],ends=[];const chars=[];
+  for(let i=0;i<text.length;i++){const start=i,cr=text[i]==='\r';if(cr&&text[i+1]==='\n')i++;chars.push(cr?'\n':text[i]);starts.push(start);ends.push(i+1);}
+  searchable=chars.join('');chars.length=0;
+  const make=(tag,cls,value)=>{const el=document.createElement(tag);el.className=cls||'';if(value!==undefined)el.textContent=value;return el;};
+  const box=make('section','gr-reader'),head=make('div','gr-heading'),title=make('strong','gr-title',metadata.title||'资料标题：未提供');
+  const close=make('button','','收起 / 返回'),copy=make('button','','复制原文');close.type=copy.type='button';head.append(title,copy,close);
+  const info=make('div','gr-info'),trust={user_confirmed:'已审核记忆',external_untrusted:'外部资料 · 未核实',agent_inferred:'莉宝的认识 · 待核实',user_reported_unreviewed:'你的陈述 · 待审'};
+  const review={reported_reviewed:'交付方记录：报告已审读',reported_verified:'交付方记录：局部验证通过',partial:'交付方记录：部分完成',unverified:'尚无核验记录'};
+  info.append(make('p','',trust[metadata.trust]||'信任状态：未提供'),make('p','',review[metadata.review]||'交付核验说明：未提供'));
+  if(metadata.reviewScope)info.append(make('p','',metadata.reviewScope));
+  info.append(make('p','','上述交付说明不等于用户事实已审、也不表示这是最新修订。'));
+  const details=make('details','gr-provenance'),summary=make('summary','','修订与来源标识（技术信息）');details.append(summary,make('p','','资料 ID：'+id),make('p','','修订：'+revision));
+  if(Array.isArray(metadata.sources)&&metadata.sources.length){
+   details.append(make('p','','来源标识 '+metadata.sources.length+' 项；接口未提供人类来源名称。'));
+   for(const source of metadata.sources)details.append(make('p','',Array.isArray(source)?source.join(' · '):String(source)));
+  }else details.append(make('p','',Number.isSafeInteger(metadata.sourceCount)?'来源数量：'+metadata.sourceCount+'；具体标识和人类来源名称未提供。':'来源标识与人类来源名称：未提供。'));
+  const label=make('label','gr-search-label','在当前正文中查找'),query=make('textarea','gr-query');query.rows=1;query.maxLength=32000;query.setAttribute('aria-label','在当前正文中查找');query.placeholder='逐字匹配，区分大小写；换行统一匹配';label.append(query);
+  const controls=make('div','gr-controls'),prev=make('button','','上一处'),next=make('button','','下一处'),reset=make('button','','清除');for(const b of [prev,next,reset])b.type='button';
+  const count=make('span','gr-count');count.setAttribute('role','status');controls.append(prev,next,reset,count);
+  const paper=make('div','gr-paper');paper.tabIndex=0;paper.setAttribute('role','region');paper.setAttribute('aria-label','当前资料正文');
+  const status=make('p','gr-status');status.setAttribute('role','status');
+  const fallback=make('div','gr-fallback');fallback.hidden=true;const manual=make('pre','gr-manual');manual.tabIndex=0;manual.setAttribute('aria-label','原文手动复制');const select=make('button','','选择全部原文');select.type='button';fallback.append(manual,select);
+  box.append(head,info,details,label,controls,paper,status,fallback);container.append(box);
+  const allowed=()=>!dead&&!closed&&visible(container)&&current();
+  function paint(jump){
+   const oldTop=paper.scrollTop,fragment=document.createDocumentFragment();
+   if(hits.length){selected=Math.max(0,Math.min(selected,hits.length-1));const {start,end}=hits[selected],mark=make('mark','gr-match',text.slice(start,end));fragment.append(document.createTextNode(text.slice(0,start)),mark,document.createTextNode(text.slice(end)));}
+   else fragment.append(document.createTextNode(text));
+   paper.replaceChildren(fragment);paper.scrollTop=oldTop;
+   count.textContent=query.value?(hits.length?(selected+1)+' / '+hits.length+' 处（仅高亮当前处）':'0 处'):'输入查找文字';prev.disabled=next.disabled=!hits.length;reset.disabled=!query.value;
+   if(jump&&hits.length){const mark=paper.querySelector('mark');paper.scrollTop+=mark.getBoundingClientRect().top-paper.getBoundingClientRect().top-paper.clientHeight/3;}
+  }
+  function find(jump=true){
+   hits=[];selected=0;const q=query.value;
+   if(q)for(let offset=0;offset<=searchable.length-q.length;){const at=searchable.indexOf(q,offset);if(at<0)break;hits.push({start:starts[at],end:ends[at+q.length-1]});offset=at+q.length;}
+   paint(jump);
+  }
+  query.value=prior?.query||'';find(false);selected=prior?.selected||0;paint(false);
+  frame=root.requestAnimationFrame(()=>{frame=null;if(allowed())paper.scrollTop=prior?.scrollTop||0;});
+  query.addEventListener('input',()=>{if(allowed())find();},{signal:events.signal});
+  prev.addEventListener('click',()=>{if(allowed()&&hits.length){selected=(selected+hits.length-1)%hits.length;paint(true);}},{signal:events.signal});
+  next.addEventListener('click',()=>{if(allowed()&&hits.length){selected=(selected+1)%hits.length;paint(true);}},{signal:events.signal});
+  reset.addEventListener('click',()=>{if(!allowed())return;query.value='';find(false);query.focus({preventScroll:true});},{signal:events.signal});
+  const selectAll=()=>{manual.focus({preventScroll:true});const selection=root.getSelection();if(selection){const range=document.createRange();range.selectNodeContents(manual);selection.removeAllRanges();selection.addRange(range);}};
+  select.addEventListener('click',selectAll,{signal:events.signal});
+  copy.addEventListener('click',async()=>{
+   if(!allowed()||copy.disabled)return;const ticket=++copyVersion;copy.disabled=true;
+   // Start the API call in this explicit click. No hidden clipboard reads.
+   try{if(!root.navigator.clipboard?.writeText)throw Error('unavailable');await root.navigator.clipboard.writeText(text);if(allowed()&&ticket===copyVersion){status.textContent='已复制原文。';fallback.hidden=true;manual.textContent='';}}
+   catch{if(allowed()&&ticket===copyVersion){status.textContent='未能自动复制。点“选择全部原文”，再按 Ctrl+C 或长按所选文字复制。';manual.textContent=text;fallback.hidden=false;selectAll();}}
+   finally{if(allowed()&&ticket===copyVersion)copy.disabled=false;}
+  },{signal:events.signal});
+  close.addEventListener('click',onClose,{signal:events.signal});
+  function destroy(remember=true){
+   if(closed)return;
+   if(remember&&!dead){positions.delete(key);positions.set(key,{id,namespace,query:query.value,selected,scrollTop:paper.scrollTop});while(positions.size>Math.max(1,Math.min(64,limit)))positions.delete(positions.keys().next().value);}
+   closed=true;copyVersion++;events.abort();if(frame!==null)root.cancelAnimationFrame(frame);unwatch();const selection=root.getSelection();if(selection?.anchorNode&&box.contains(selection.anchorNode))selection.removeAllRanges();box.remove();paper.replaceChildren();manual.textContent='';query.value='';text='';searchable='';starts=[];ends=[];hits=[];
+  }
+  const unwatch=watch(container,()=>{destroy();onClose();});
+  return Object.freeze({destroy});
+ }
+ return Object.freeze({mount,watch,suspend,clear,destroy(){if(dead)return;clear();dead=true;observer.disconnect();positions.clear();}});
+}
+root.GernzeReadingTools=Object.freeze({createSession,visible});
+})(window);

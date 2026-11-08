@@ -89,3 +89,23 @@ html,body{background:#1e2e41}
 .toast{color:#42586b;background:#f5efe2;border:1px solid #c7b18a;border-radius:10px;box-shadow:0 6px 25px #172a4029}
 @media(max-width:350px){.shell[data-current-page]:not([data-current-page=home]) .content:not(#dialogue){margin-inline:10px;padding-inline:15px}}
 @media(prefers-reduced-motion:reduce){.shell .content:not(#dialogue) .technical summary::before{transition:none}}
+
+/* FE-03: short available viewport. Same artwork, labels and entry points. */
+.shell[data-current-page=dialogue][data-dialogue-compact=true] { max-height:none; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .top { padding-top:calc(2px + var(--safe-area-inset-top,env(safe-area-inset-top,0px))); padding-bottom:2px; gap:8px; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .top .brand { height:auto; min-height:44px; flex:1 1 auto; min-width:0; gap:8px; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .top .brand-mark { width:44px; height:44px; min-width:44px; min-height:44px; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .brand-copy { min-width:0; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .brand-copy small { display:none; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .top .brand strong { white-space:normal; overflow-wrap:anywhere; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .top .round,.shell[data-current-page=dialogue][data-dialogue-compact=true] .top .message { width:auto; height:auto; min-width:44px; min-height:44px; flex-direction:row; padding:5px 8px; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .bottom { padding:2px 8px calc(2px + var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))); gap:5px; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .bottom::before { top:2px; bottom:2px; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .bottom .q-tab { display:flex; align-items:center; justify-content:center; gap:4px; height:auto; min-height:44px; padding:2px 4px; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .bottom .q-tab::before { inset:0; height:auto; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .bottom .nav-avatar { position:relative; left:auto; top:auto; width:30px; height:30px; flex:none; transform:none; }
+.shell[data-current-page=dialogue][data-dialogue-compact=true] .bottom .tab-label { position:static; height:auto; min-width:0; white-space:normal; overflow-wrap:anywhere; line-height:1.4; }
+/* An intrinsic header can grow with enlarged text without changing normal art. */
+.shell[data-current-page]:not([data-current-page=home]):not([data-dialogue-compact=true]) .top .brand { flex:1 1 auto; height:auto; min-height:52px; }
+.shell[data-current-page]:not([data-current-page=home]) .top .brand-copy { min-width:0; }
+.shell[data-current-page]:not([data-current-page=home]) .top .brand strong { white-space:normal; overflow-wrap:anywhere; }

@@ -43,6 +43,8 @@ async function harness({ready=null,appPromise=null,installerPromise=null,transpo
     Capacitor:{isNativePlatform:()=>true,getPlatform:()=> 'android'},registerPlugin:()=>({scan:async()=>({})}),
     App:{addListener:()=>{trace.appAdded++;return appPromise?.promise||Promise.resolve({remove:async()=>{trace.appRemoved++;}});}},
     createUpdateTransport:()=>transport,updateInstaller:installer,createUpdateController,
+    mountUpdateLog:()=>({update(){},destroy(){}}), // actual DOM component covered by shelf-storage.html
+
     TextEncoder,fetch:async()=>{throw Error('no network')},console});
   const shared=readFileSync(new URL('../../src/workbench/static/task-progress.js',import.meta.url),'utf8');
   vm.runInContext(shared,context);
@@ -131,4 +133,29 @@ test('review steps remain actual completed counts; unknown work has no percentag
   assert.equal(bar.element.style['--task-progress'],'0');
   assert.equal(bar.element.attributes['aria-valuenow'],undefined);
   bar.destroy();h.window.dispatch('pagehide');
+});
+
+
+test('preparing a delta never shows the full APK size or a download percentage',async()=>{
+  const download=deferred();
+  const h=await harness({transportOverrides:{getRelease:async()=>({release:{...release,size:395_995_863}}),download:()=>download.promise}});
+  await h.el('updateCheck').onclick();await tick();
+  h.el('updateDownload').onclick();await tick();
+  const title=h.bar().children[0].children[0],number=h.bar().children[0].children[1],detail=h.bar().children[2];
+  assert.equal(title.textContent,'准备下载');
+  assert.equal(h.bar().dataset.mode,'indeterminate');
+  assert.equal(number.textContent,'');
+  assert.match(detail.textContent,/核对可复用资源/);
+  assert.doesNotMatch(detail.textContent,/[MK]B/);
+  assert.equal(h.el('updateCancel').hidden,false);
+  h.trace.progressCallback({downloadId:uuid,transferKind:'full',totalBytes:501_000,receivedBytes:0});
+  assert.equal(h.bar().dataset.mode,'indeterminate');
+  h.trace.progressCallback({downloadId:uuid,transferKind:'delta',totalBytes:514_508,receivedBytes:0});
+  assert.match(detail.textContent,/0.00 \/ 514.51 KB/);
+  h.trace.progressCallback({downloadId:uuid,transferKind:'delta',totalBytes:514_508,receivedBytes:257_254});
+  assert.equal(number.textContent,'50%');
+  download.resolve({status:'downloaded',downloadId:uuid});await tick();await tick();
+  assert.equal(number.textContent,'100%');
+  assert.doesNotMatch(detail.textContent,/[MK]B/);
+  h.window.dispatch('pagehide');
 });

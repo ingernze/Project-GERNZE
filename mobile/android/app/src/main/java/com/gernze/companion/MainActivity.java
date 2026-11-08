@@ -24,6 +24,8 @@ public class MainActivity extends BridgeActivity {
         splash.setOnExitAnimationListener(view -> view.remove());
         registerPlugin(LibaoShakePlugin.class);
         registerPlugin(LibaoChatPlugin.class);
+        registerPlugin(LibaoWebPlugin.class);
+        registerPlugin(LibaoSpeechPlugin.class);
         registerPlugin(LibaoPairingScanner.class);
         registerPlugin(LibaoUpdateTransport.class);
         registerPlugin(LibaoUpdateInstallerPlugin.class);

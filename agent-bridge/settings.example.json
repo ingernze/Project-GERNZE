@@ -3,5 +3,6 @@
   "persona": "../src/workbench/companion_persona.example.md",
   "foundation": "empty-core.example.json",
   "desktop_journal": null,
-  "approved_snapshot": null
+  "approved_snapshot": null,
+  "allow_codex_layer2_review": false
 }

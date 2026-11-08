@@ -1,5 +1,5 @@
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from test_storage import TemporaryDirectory
 import asyncio
 import json
 import sqlite3
@@ -72,7 +72,7 @@ async def checks():
                 await client.initialize()
                 tools = (await client.list_tools()).tools
                 names = {t.name for t in tools}
-                check(len(names)==7 and not any('approve' in n or 'core_write' in n for n in names), '真实MCP握手与工具列表，无一二层写接口')
+                check(len(names)==9 and {'prepare_lily_review','decide_lily_review'} <= names and 'core_write' not in names, '真实MCP握手九工具，第一层无写口，第二层仅显式审查')
                 result = await client.call_tool('get_lily_context',{'session_id':a,'query':'原型'})
                 value=result.structuredContent or json.loads(result.content[0].text)
                 check(not result.isError and value['tier1']['readOnly'], '真实stdio读取上下文')

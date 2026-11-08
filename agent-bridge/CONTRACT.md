@@ -1,3 +1,7 @@
+# 2026-11-07按需审查更新（覆盖下方旧的全部只读描述）
+
+本机配置明确启用后，Codex可用prepare_lily_review／decide_lily_review审查本模块当前会话候选并保存Codex第二层。只在用户当次明确要求时领取一次批次；来源/版本/时效校验及审查回执均保留。第一层与桌面第二层数据库仍只读；手机/桌面消费这批Codex已审结果尚未接回。用户原话留底仍为agent_reported，不宣称宿主级授权证明。配置默认关闭，用户本机已授权启用。新工具需重连或重启Codex后加载。
+
 # Codex莉宝模块与桌面适配契约
 
 本模块用已安装的官方MCP Python SDK 1.27.0（MIT），stdio传输，Skill只负责调用流程。普通Codex、角色会话和桌宠可同时运行；角色会话UUID独立。本模块不实例化旧ConversationStore，因为其初始化会接管owner并中断旧pending请求。

@@ -27,3 +27,6 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+// NET-01 candidate: isolated native web dependencies.
+apply from: "native-web.gradle"

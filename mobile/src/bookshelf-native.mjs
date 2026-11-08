@@ -20,7 +20,7 @@ export function createBookshelfSync({transport=native,cache=createBookshelfCache
    const previous=state?Object.fromEntries(['serverId','scope_id','sequence','snapshotId','manifestHash'].map(k=>[k,state[k]])):null;
    const send=async request=>{check();const value=await transport.layerExchange({pairingId,request:{bookshelf:{format:BOOKSHELF_FORMAT,...request}}});check();return value;};
    const manifest=await send({phase:'manifest',previous});await validateShelfManifest(manifest,binding,previous);check();
-   if(state?.sequence===manifest.sequence){progress('分类书架已是最新。',1,1,true);return {unchanged:true};}
+   if(state?.sequence===manifest.sequence){progress('分类书架已是最新。',1,1,true);window.dispatchEvent(new Event('hebao:bookshelf-changed'));return {unchanged:true};}
    const pages=[],hashes=[];let offset=0,loaded=0;
    while(offset<manifest.bodyEntryCount){
     if(pages.length>=256)throw Error('资料页数超过接回上限，原书架保留。');

@@ -7,8 +7,8 @@ android {
         applicationId "com.hecate.companion"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 35
-        versionName "1.1.2"
+        versionCode 56
+        versionName "1.1.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -31,7 +31,31 @@ repositories {
     }
 }
 
+// Optional explicit staging output; absent models remain visibly unprepared.
+if (project.hasProperty('libaoSpeechModelDir')) {
+    android.sourceSets.main.assets.srcDir(file(project.property('libaoSpeechModelDir')))
+}
+
+// The upstream release AAR is staged explicitly in the isolated build.
+// Do not silently substitute an unpinned binary or download from app code.
+def sherpaAarPath = providers.gradleProperty('libaoSherpaAar').orNull
+if (!sherpaAarPath) throw new GradleException('Pass -PlibaoSherpaAar with the verified STT-03 AAR.')
+def sherpaAar = file(sherpaAarPath)
+if (!sherpaAar.isFile()) throw new GradleException('The pinned STT-03 AAR is missing.')
+def sherpaDigest = java.security.MessageDigest.getInstance('SHA-256')
+sherpaAar.withInputStream { stream ->
+    byte[] buffer = new byte[65536]
+    int count
+    while ((count = stream.read(buffer)) != -1) sherpaDigest.update(buffer, 0, count)
+}
+if (sherpaDigest.digest().encodeHex().toString() != '07e042d97f3a6bd5b7fe74d4eef0513dc01a714b16c15a903250095aba43a575') {
+    throw new GradleException('The pinned STT-03 AAR checksum does not match.')
+}
+
 dependencies {
+    implementation files(sherpaAar)
+    // The prebuilt Kotlin API has no Maven POM when consumed as a local AAR.
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.7.20'
     implementation "com.journeyapps:zxing-android-embedded:4.3.0"
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"

@@ -565,3 +565,7 @@ Open WebUI完整Svelte/FastAPI/文件检索栈与现有静态工作台、SQLite�
 ### 见闻与课程专题（2026-10-31）
 
 继续复用本项目歌单的原生details/summary、标题检索和逐项读取，参考沿用上条W3C APG的折叠模式。没有新依赖或新美术，也没有复制第三方自动分类器；只对既有明确系列和标题标识提供导航，未知保留单列。7项新增实际浏览器操作检查通过，未重复无关全套检查。
+
+## 2026-11-08：1.1.9 源码中的第三方依赖
+
+手机语音输入使用 [sherpa-onnx 2.0.1](https://github.com/k2-fsa/sherpa-onnx/releases/tag/v2.0.1) 及可选 [双语 Zipformer 模型](https://huggingface.co/csukuangfj/sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20/tree/98590b7ed6443e77b714204da2757d75e1a642f4)。原生网页读取使用 OkHttp Android、Okio 和 jsoup，锁定版本见 Android 依赖清单。许可见 [移动端第三方声明](../mobile/www/updates-notices.txt)。公开截图沿用本项目已公开展示的角色与书架美术，聊天与月册记录为演示数据。

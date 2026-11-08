@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "versionName": "1.1.9",
+  "versionCode": 56,
+  "date": "2026-11-08",
+  "status": "个人日用更新",
+  "changes": [
+    "电脑更新核对本机资源时只显示状态，确认传输方式后显示实际差量或整包大小和进度。"
+  ],
+  "knownIssues": []
+}

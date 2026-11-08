@@ -1,0 +1,184 @@
+{
+  "format": "net01-native-web-dependencies-v1",
+  "strategy": "Exact Gradle coordinates + resolutionStrategy.force; byte hashes retained for downloaded artifacts. Not a resolved Android dependency graph.",
+  "android": [
+    {
+      "coordinate": "com.squareup.okhttp3:okhttp-android:5.3.2",
+      "license": "Apache-2.0",
+      "artifact": "aar"
+    },
+    {
+      "coordinate": "org.jsoup:jsoup:1.23.2",
+      "license": "MIT"
+    },
+    {
+      "coordinate": "com.android.tools:desugar_jdk_libs_nio:2.1.5",
+      "license": "GPL-2.0-with-classpath-exception"
+    },
+    {
+      "coordinate": "com.android.tools:desugar_jdk_libs_configuration_nio:2.1.5",
+      "license": "GPL-2.0-with-classpath-exception"
+    },
+    {
+      "coordinate": "com.squareup.okio:okio-jvm:3.16.4",
+      "license": "Apache-2.0"
+    },
+    {
+      "coordinate": "org.jetbrains.kotlin:kotlin-stdlib:2.2.21",
+      "license": "Apache-2.0"
+    },
+    {
+      "coordinate": "org.jetbrains:annotations:13.0",
+      "license": "Apache-2.0"
+    },
+    {
+      "coordinate": "androidx.annotation:annotation-jvm:1.9.1",
+      "license": "Apache-2.0"
+    },
+    {
+      "coordinate": "androidx.startup:startup-runtime:1.2.0",
+      "license": "Apache-2.0"
+    }
+  ],
+  "downloaded": [
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp-jvm",
+      "version": "5.3.2",
+      "testOnly": false,
+      "pom": {
+        "file": "okhttp-jvm-5.3.2.pom",
+        "bytes": 1860,
+        "sha256": "aee87197bbfb2d7424b6241d300eb0cbffb1844c9cab0129cae5390408b33fa4",
+        "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-jvm/5.3.2/okhttp-jvm-5.3.2.pom"
+      },
+      "jar": {
+        "file": "okhttp-jvm-5.3.2.jar",
+        "bytes": 868403,
+        "sha256": "c771f48075b763f6c322055e21129a94b7de4c1faf3f8f58ace320b0c9517a30",
+        "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-jvm/5.3.2/okhttp-jvm-5.3.2.jar"
+      }
+    },
+    {
+      "group": "com.squareup.okio",
+      "artifact": "okio-jvm",
+      "version": "3.16.4",
+      "testOnly": false,
+      "pom": {
+        "file": "okio-jvm-3.16.4.pom",
+        "bytes": 1699,
+        "sha256": "66778f4d0597bce63f91ec000c575cc029b3201f7dd092cb808875155b3e86a1",
+        "url": "https://repo.maven.apache.org/maven2/com/squareup/okio/okio-jvm/3.16.4/okio-jvm-3.16.4.pom"
+      },
+      "jar": {
+        "file": "okio-jvm-3.16.4.jar",
+        "bytes": 383010,
+        "sha256": "2196b993cd34dbbd919e7e01f57a4781b58bee80f86106163e287c20343a96a7",
+        "url": "https://repo.maven.apache.org/maven2/com/squareup/okio/okio-jvm/3.16.4/okio-jvm-3.16.4.jar"
+      }
+    },
+    {
+      "group": "org.jetbrains.kotlin",
+      "artifact": "kotlin-stdlib",
+      "version": "2.2.21",
+      "testOnly": false,
+      "pom": {
+        "file": "kotlin-stdlib-2.2.21.pom",
+        "bytes": 2301,
+        "sha256": "cf31f923196c63aedecd0a57c24269bd3702a4e47c0bf0bd64b5ada5de522272",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.2.21/kotlin-stdlib-2.2.21.pom"
+      },
+      "jar": {
+        "file": "kotlin-stdlib-2.2.21.jar",
+        "bytes": 1761445,
+        "sha256": "6558a3d233da56a20934b32159f9db5f86ed5816ef098f78a2c223dc6abb79dd",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.2.21/kotlin-stdlib-2.2.21.jar"
+      }
+    },
+    {
+      "group": "org.jetbrains",
+      "artifact": "annotations",
+      "version": "13.0",
+      "testOnly": false,
+      "pom": {
+        "file": "annotations-13.0.pom",
+        "bytes": 4930,
+        "sha256": "965aeb2bedff369819bdde1bf7a0b3b89b8247dd69c88b86375d76163bb8c397",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.pom"
+      },
+      "jar": {
+        "file": "annotations-13.0.jar",
+        "bytes": 17536,
+        "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.jar"
+      }
+    },
+    {
+      "group": "org.jsoup",
+      "artifact": "jsoup",
+      "version": "1.23.2",
+      "testOnly": false,
+      "pom": {
+        "file": "jsoup-1.23.2.pom",
+        "bytes": 23761,
+        "sha256": "3ff28beafd484e9c345e0749d697d2aa31f29ace54b5d4da4e8375e6d8fe1802",
+        "url": "https://repo.maven.apache.org/maven2/org/jsoup/jsoup/1.23.2/jsoup-1.23.2.pom"
+      },
+      "jar": {
+        "file": "jsoup-1.23.2.jar",
+        "bytes": 537806,
+        "sha256": "e9d8c856856680427f096d156f02a414289985c930998fcb519ce5be39b42003",
+        "url": "https://repo.maven.apache.org/maven2/org/jsoup/jsoup/1.23.2/jsoup-1.23.2.jar"
+      }
+    },
+    {
+      "group": "org.json",
+      "artifact": "json",
+      "version": "20250517",
+      "testOnly": true,
+      "pom": {
+        "file": "json-20250517.pom",
+        "bytes": 10175,
+        "sha256": "71a1fb86a2b05537a3cfc1c87db42d036efdbbfc7e9c349b635d21ac1fa876a7",
+        "url": "https://repo.maven.apache.org/maven2/org/json/json/20250517/json-20250517.pom"
+      },
+      "jar": {
+        "file": "json-20250517.jar",
+        "bytes": 82710,
+        "sha256": "3ea61b2a06e31edf1c91134fe9106b0ebb16628be169f3db75bc7a2b06b45796",
+        "url": "https://repo.maven.apache.org/maven2/org/json/json/20250517/json-20250517.jar"
+      }
+    },
+    {
+      "file": "okhttp-android-5.3.2.pom",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-android/5.3.2/okhttp-android-5.3.2.pom",
+      "bytes": 3239,
+      "sha256": "a426409e978b821d5ccf075e7daf10f8c670761a8d9085b704977b1a54942bf4"
+    },
+    {
+      "file": "okhttp-android-5.3.2.aar",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-android/5.3.2/okhttp-android-5.3.2.aar",
+      "bytes": 866874,
+      "sha256": "f1a78812ebeef4d45eee0dbeb4f27347210f564d2b8ee411f012ce8573b0a658"
+    },
+    {
+      "file": "desugar_jdk_libs_nio-2.1.5.pom",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/desugar_jdk_libs_nio/2.1.5/desugar_jdk_libs_nio-2.1.5.pom",
+      "bytes": 1265,
+      "sha256": "1ba5db067a494d09f5c4a94f4cb4d58fc6fd33e0a55417e0e46d3b288328f3bc"
+    },
+    {
+      "file": "desugar_jdk_libs_nio-2.1.5.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/desugar_jdk_libs_nio/2.1.5/desugar_jdk_libs_nio-2.1.5.jar",
+      "bytes": 6113073,
+      "sha256": "d8044befae095781b9a80bf1faa92edc30382d75d437476784c1bf991598a976"
+    }
+  ],
+  "androidGradleResolutionVerified": false,
+  "additionalDownload": {
+    "file": "desugar_jdk_libs_configuration_nio-2.1.5.jar",
+    "sha256": "7db51661cd07d1fd5cf12769a75ba201910624bb3801c09363dd3cb28e31c51b",
+    "bytes": 64007,
+    "url": "https://dl.google.com/dl/android/maven2/com/android/tools/desugar_jdk_libs_configuration_nio/2.1.5/desugar_jdk_libs_configuration_nio-2.1.5.jar"
+  }
+}

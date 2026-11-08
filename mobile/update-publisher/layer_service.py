@@ -59,13 +59,18 @@ class LayerService(LayerSync):
         super().__init__(chat,server_id)
         from workbench.bookshelf_transfer import BookshelfTransfer
         self.bookshelf=BookshelfTransfer(store,server_id,self.scope)
+        from workbench.knowledge_transfer import KnowledgeTransfer
+        self.knowledge=KnowledgeTransfer(path.parent.parent,self.server_id,self.scope)
     def info(self):
         info=super().info()
         from workbench.bookshelf_transfer import FORMAT
         info['bookshelfCache']=FORMAT if self.bookshelf.available() else None
+        info['knowledgeLibrary']=self.knowledge.capability()
         return {**info,'reviewOn':'desktop','phoneRaw':'gernze-phone-raw-v1','phoneResearchRaw':'gernze-phone-research-raw-v1' if info['researchCache'] else None}
 
     def exchange(self,body,*,peer_device=None):
+        if type(body) is dict and 'knowledge' in body:
+            return self.knowledge.exchange(body)
         if type(body) is dict and 'bookshelf' in body:
             return self.bookshelf.exchange(body)
         return super().exchange(body,desktop_review=True,peer_device=peer_device)

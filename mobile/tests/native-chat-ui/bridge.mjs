@@ -2,7 +2,7 @@
 export class NativeChatDouble {
   constructor({onRequest=()=>{},cancelMode='drain',cancelDelay=20}={}){
     this.events=[];this.tasks=new Map();this.active=null;this.onRequest=onRequest;this.cancelMode=cancelMode;this.cancelDelay=cancelDelay;this.maxActive=0;
-    this.config={enabled:true,configured:true,keyPresent:true,endpoint:'https://synthetic.invalid/chat/completions',model:'synthetic-only',balanceSupported:false};
+    this.config={activeId:'default',profiles:[{id:'default',name:'合成连接',keyPresent:true}],savedCount:1,profileLimit:8,enabled:true,configured:true,keyPresent:true,endpoint:'https://synthetic.invalid/chat/completions',model:'synthetic-only',balanceSupported:false};
   }
   log(type,data={}){this.events.push({type,at:performance.now(),...data});}
   error(message,code){return Object.assign(Error(message),{code});}

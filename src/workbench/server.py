@@ -45,6 +45,8 @@ ASSETS = {
 ASSETS.update({
     '/scene-chat.js': ('scene-chat.js', 'text/javascript; charset=utf-8'),
     '/scene-memory.js': ('scene-memory.js', 'text/javascript; charset=utf-8'),
+    '/knowledge-books.js': ('knowledge-books.js', 'text/javascript; charset=utf-8'),
+    '/knowledge-books.css': ('knowledge-books.css', 'text/css; charset=utf-8'),
     '/chat-adapter.js': ('chat-adapter.js', 'text/javascript; charset=utf-8'),
     '/scene/reaction-controller.js': ('scene/reaction-controller.js', 'text/javascript; charset=utf-8'),
     '/scene.js': ('scene.js', 'text/javascript; charset=utf-8'),
@@ -254,6 +256,8 @@ CONTROL.update({
     'chat.study.reply': ({'text','request_id','materials'},set()),
     'chat.research.status': (set(),set()),
     'chat.research.reply': ({'text','request_id','materials'},set()),
+    'chat.knowledge.catalog': (set(),set()),
+    'chat.knowledge.read': ({'ident','revision'},set()),
     'chat.research.groups': (set(),set()),
     'chat.research.list': ({'category'},{'after'}),
     'chat.research.read': ({'category','id','revision','purpose'},set()),
@@ -286,6 +290,19 @@ class WorkbenchServer(HTTPServer):
         self.study_chat = StudyChat(self.chat)
         self.research_chat = ResearchChat(self.chat)
         self.archive = MemoryArchive(self.chat,legacy=self.memories)
+        # Owner-configured read-only project library. No writer is attached to HTTP.
+        self.knowledge = None
+        self.knowledge_invalid = False
+        try:
+            from .knowledge_library import KnowledgeReader
+            config_path=Path(data_dir)/'knowledge-workspace.json'
+            if config_path.is_file():
+                config=strict_json(config_path.read_text(encoding='utf-8'),max_bytes=64000)
+                if set(config)!= {'format','workspace'} or config['format']!='gernze-knowledge-link-v1':raise ValueError('invalid_knowledge_link')
+                self.knowledge=KnowledgeReader(config['workspace'])
+                self.knowledge.catalog()
+        except (ValueError,OSError,KeyError,TypeError):
+            self.knowledge=None;self.knowledge_invalid=True
         # A local owner receipt enables browsing/import only. It never enables
         # research chat, migrates the journal, or grants L2/model permissions.
         receipt = Path(data_dir) / 'bookshelf-receipt.json'
@@ -577,6 +594,12 @@ class Handler(BaseHTTPRequestHandler):
             elif command == 'chat.books.undated': result = self.server.archive.undated()
             elif command == 'chat.study.status': result = self.server.study_chat.status()
             elif command == 'chat.study.reply': result = self.server.study_chat.reply(**_params)
+            elif command == 'chat.knowledge.catalog':
+                reader=self.server.knowledge
+                result={**reader.catalog(),'available':True} if reader else {'available':False,'collections':[],'entries':[],'detail':'知识库连接暂不可用，请保留原资料。' if self.server.knowledge_invalid else '尚未连接本项目知识库。'}
+            elif command == 'chat.knowledge.read':
+                if self.server.knowledge is None:raise ValueError('知识库未连接。')
+                result=self.server.knowledge.read(**_params)
             elif command == 'chat.research.status': result = self.server.research_chat.status()
             elif command == 'chat.research.reply': result = self.server.research_chat.reply(**_params)
             elif command.startswith('chat.research.'):

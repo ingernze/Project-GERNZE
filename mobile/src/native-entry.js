@@ -16,3 +16,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 import {mountCodexTasks} from './native-codex-tasks';
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountCodexTasks,{once:true});else mountCodexTasks();
+
+import {mountSpeech} from './native-speech';
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountSpeech,{once:true});else mountSpeech();
+window.addEventListener('pageshow',event=>{if(event.persisted)mountSpeech();});

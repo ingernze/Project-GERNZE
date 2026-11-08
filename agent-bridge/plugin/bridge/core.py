@@ -27,7 +27,10 @@ def text(value, limit):
     return value
 
 
-class Bridge:
+from review import ReviewMixin
+
+
+class Bridge(ReviewMixin):
     def __init__(self, config):
         self.config = config
         self.path = Path(config['state_db']).resolve()
@@ -48,6 +51,9 @@ class Bridge:
               body TEXT NOT NULL,sources_json TEXT NOT NULL,source_hash TEXT NOT NULL,
               created_at TEXT NOT NULL,updated_at TEXT NOT NULL,deleted INTEGER NOT NULL DEFAULT 0);
             ''')
+
+        with self.db() as db:
+            self.init_review(db)
 
     @contextmanager
     def db(self):
@@ -193,6 +199,10 @@ class Bridge:
             self.session(db, session_id)
         legacy, desktop_status = self.desktop_summaries()
         approved, tier2_status = self.approved()
+        codex_approved = self.agent_approved()
+        approved += codex_approved
+        if codex_approved:
+            tier2_status += '+codex-reviewed'
         blocked = {r['key'] for r in approved}
         working = [r for r in self.pending() if not r['deleted'] and r['key'] not in blocked] + legacy
         terms = set(re.findall(r'[a-z0-9_]{2,}|[\u4e00-\u9fff]{2}', query.lower()))
@@ -203,6 +213,7 @@ class Bridge:
                 'tier2Status': tier2_status, 'desktopStatus': desktop_status,
                 'sessionId': session_id, 'desktopWrites': False,
                 'desktopConsumesAgentTier3': False,
+                'codexLayer2ReviewEnabled': self.config.get('allow_codex_layer2_review') is True,
                 'notice': '第三层是未审核资料，不能覆盖第一、二层；未接通的第二层不能当成空库。'}
 
     def approved(self):

@@ -187,3 +187,7 @@
 .desktop-books-shell .desktop-archive-notice{flex:none;padding:8px 12px;color:var(--hebao-ink,#f2e9d6);font-size:13px;line-height:1.7}
 .desktop-books-shell .desktop-archive-notice[hidden]{display:none!important}
 .desktop-books-shell .desktop-archive-notice .scene-button{margin-left:8px}
+
+/* Long connection names stay readable inside the existing desktop settings seat. */
+.desktop-connection-settings .scene-key-choice{max-width:100%;min-width:min(120px,100%)}
+.desktop-connection-settings .scene-key-choice>span{max-width:100%;overflow-wrap:anywhere}

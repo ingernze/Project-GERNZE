@@ -1,0 +1,14 @@
+// Candidate-only dependency addition. app/build.gradle and version remain untouched.
+project(':app') {
+    plugins.withId('com.android.application') {
+        android.compileOptions.coreLibraryDesugaringEnabled = true
+        dependencies {
+            implementation 'com.squareup.okhttp3:okhttp-android:5.3.2'
+            implementation 'org.jsoup:jsoup:1.23.2'
+            coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
+        }
+        configurations.configureEach {
+            resolutionStrategy.force 'com.squareup.okhttp3:okhttp-android:5.3.2', 'com.squareup.okio:okio-jvm:3.16.4', 'org.jetbrains.kotlin:kotlin-stdlib:2.2.21', 'org.jetbrains:annotations:13.0', 'org.jsoup:jsoup:1.23.2', 'com.android.tools:desugar_jdk_libs_nio:2.1.5', 'com.android.tools:desugar_jdk_libs_configuration_nio:2.1.5', 'androidx.annotation:annotation-jvm:1.9.1', 'androidx.startup:startup-runtime:1.2.0'
+        }
+    }
+}

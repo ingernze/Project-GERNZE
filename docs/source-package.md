@@ -1,6 +1,4 @@
-> 2026-10-31现行分发状态：源码白名单为546项，原位更新的书架和手机模块仍使用已有清单路径。公开下载继续使用README中的1.1.1链接；1.1.2公开候选已按10月31日源码重建，仍未上传；它与私人code35升级包分开保存。下方带日期的文件数与候选状态均为历史记录。
->
-> 私人人设、个人核心资料、聊天/书架数据库、发布器`.state`、配对凭据、私人安装包和本地维护笔记不属于公开源码。白名单与排除规则审计只核对明确路径及固定排除探针，不等同所有文件内容的秘密扫描，也不证明旧发行附件与当前源码一致。实际变更见[制作日志](development-log.md)，待发布范围见[1.1.2说明](release-1.1.2.md)。
+> 现行仓库源码为 **1.1.9（Android 构建 56）**，白名单共 592 项。公开可下载的安装包仍是 1.1.2。最新变更和构建条件见 [1.1.9 源码说明](release-1.1.9.md)。下方早期记录按历史保留。
 
 > 2026-10-23 上传准备：现行白名单为 438 项，包含作者确认的 README 和 13 个实际引用的展示文件；正式桌面入口为 `src/desktop_main.py`。展示图片并非完整运行素材包，模型与语音环境仍另行提供。下文较早的文件数量与路径属于历史快照。
 
@@ -16,7 +14,7 @@
 
 Windows：Python 3.12，安装根目录 requirements-desktop.txt 与 requirements-build.txt 后，准备匹配素材和模块清单，执行 src/build_modular_release.ps1。默认 -BuildMode public；私人模式须显式 -BuildMode private。两者使用独立生成目录，均不扫描私人数据库、不修改原人设和基础资料。
 
-Android：Node/npm 按 mobile/package-lock.json 安装依赖（npm ci），JDK 21、Android SDK 36、Gradle 8.14.3。准备匹配且可分发的 mobile/www 资源、Android 启动图标等资源后，在 mobile 运行 npm run build:web，再运行 npx cap sync android，配置本机 SDK 路径后，在 mobile/android 用 Gradle assembleRelease 构建。源码未发布本机 local.properties、签名密钥或完整素材，因此源码导出不是开箱即用安装包。公开发行应使用 release，验证不可调试；签名由发行者自己的密钥完成，密钥不得进入 Git。不要直接改生成的 native-bridge.js 代替其 mobile/src 源码。
+Android：Node/npm 按 mobile/package-lock.json 安装依赖（npm ci），JDK 21、Android SDK 36、Gradle 8.14.3。Gradle 需要通过 -PlibaoSherpaAar 指定经 SHA-256 校验的官方 AAR。模型单独准备，见 [1.1.9 源码说明](release-1.1.9.md)。准备匹配且可分发的 mobile/www 资源、Android 启动图标等资源后，在 mobile 运行 npm run build:web，再运行 npx cap sync android，配置本机 SDK 路径后，在 mobile/android 用 Gradle assembleRelease 构建。源码未发布本机 local.properties、签名密钥或完整素材，因此源码导出不是开箱即用安装包。公开发行应使用 release，验证不可调试；签名由发行者自己的密钥完成，密钥不得进入 Git。不要直接改生成的 native-bridge.js 代替其 mobile/src 源码。
 
 本轮补齐自有安装、下载缓存、配对凭据存储和扫码 Activity 源码，及 Android/npm 必要构建元信息。cap sync 生成的依赖路径使用相对 node_modules 路径。未把实际凭据、证书、SDK 路径、生成 APK 或私人配置放入白名单。
 

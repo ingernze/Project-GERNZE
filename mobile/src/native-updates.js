@@ -1,3 +1,4 @@
+import {mountUpdateLog} from './update-log.mjs';
 import '../../src/workbench/static/task-progress.js';
 import {Capacitor,registerPlugin} from '@capacitor/core';
 import {App} from '@capacitor/app';
@@ -30,7 +31,10 @@ export function mountUpdates(){
   $('updateLicenses').addEventListener('toggle',async()=>{if(!$('updateLicenses').open||$('updateLicenseText').dataset.loaded)return;try{const response=await fetch('updates-notices.txt');if(!response.ok)throw Error();$('updateLicenseText').textContent=await response.text();$('updateLicenseText').dataset.loaded='1';}catch{$('updateLicenseText').textContent='许可文件暂未加载，可重开后查看。';}});
   const native=Capacitor.isNativePlatform()&&Capacitor.getPlatform()==='android';
   if(!native){$('updateVersion').textContent='此功能在手机安装版中使用。';$('updateStatus').textContent='电脑发布更新后，手机莉宝通过热点接收。';panel.querySelectorAll('button,input').forEach(el=>el.disabled=true);return;}
+  const updateLog=mountUpdateLog({container:panel});
   let identityAnswer=null,closed=false;
+  const identity=pair=>JSON.stringify([pair?.pairingId||null,pair?.fingerprint||null]);
+  let pairingIdentity;try{pairingIdentity=identity(JSON.parse(localStorage.getItem('hebao.updates.v1')||'{}')?.pair);}catch{pairingIdentity=identity(null);}
   const answer=value=>{const resolve=identityAnswer;identityAnswer=null;if($('updateIdentity').open)$('updateIdentity').close();resolve?.(value);};
   $('updateIdentityConfirm').onclick=()=>answer(true);$('updateIdentityCancel').onclick=()=>answer(false);
   $('updateIdentity').addEventListener('cancel',e=>{e.preventDefault();answer(false);});
@@ -41,7 +45,10 @@ export function mountUpdates(){
       identityAnswer=resolve;$('updateIdentity').showModal();
     }),onChange:state=>{
       if(closed)return;
-      $('updateVersion').textContent=state.installed?`当前版本 ${state.installed.versionName}`:'正在读取当前版本…';
+      const nextIdentity=identity(state.pair);
+      if(nextIdentity!==pairingIdentity){pairingIdentity=nextIdentity;window.dispatchEvent(new Event('hebao:pairing-changed'));}
+      void updateLog.update(state.installed);
+      $('updateVersion').textContent=state.installed?`当前版本 ${state.installed.versionName} / 构建 ${state.installed.versionCode}`:'正在读取当前版本…';
       $('updatePeer').textContent=state.pair?`已配对电脑 ${state.pair.host}:${state.pair.port}`:'还没有配对电脑。';
       $('updateStatus').textContent=state.message;
       $('updateScan').disabled=state.busy||!!state.ready;
@@ -49,8 +56,13 @@ export function mountUpdates(){
       $('updateDownload').hidden=state.phase!=='available';$('updateDownload').disabled=state.busy;
       $('updateCancel').hidden=state.phase!=='downloading';$('updateCancel').disabled=false;
       $('updateProgress').hidden=!['downloading','verifying','ready'].includes(state.phase)&&!(state.phase==='error'&&state.progress>0);
-      const bytes=state.phase==='downloading'&&state.totalBytes>0?`已下载 ${(state.receivedBytes/1048576).toFixed(2)} / ${(state.totalBytes/1048576).toFixed(2)} MB · `:'';
-      progress.update({state:state.phase==='error'?'error':state.phase==='ready'?'complete':'running',value:['verifying','ready'].includes(state.phase)?1:state.progress,label:'下载更新',detail:bytes+state.message});
+      let bytes='';
+      if(state.phase==='downloading'&&state.transferKind&&state.totalBytes>0){
+        const megabytes=state.totalBytes>=1_000_000,unit=megabytes?'MB':'KB',divisor=megabytes?1_000_000:1000;
+        bytes=`已下载 ${(state.receivedBytes/divisor).toFixed(2)} / ${(state.totalBytes/divisor).toFixed(2)} ${unit} · `;
+      }
+      const label=state.phase==='downloading'&&!state.transferKind?'准备下载':state.transferKind==='delta'?'小包更新':'下载更新';
+      progress.update({state:state.phase==='error'?'error':state.phase==='ready'?'complete':'running',value:['verifying','ready'].includes(state.phase)?1:state.progress,label,detail:bytes+state.message});
       $('updateInstall').hidden=!state.ready;$('updateInstall').disabled=state.busy||state.phase==='awaiting_user';
       $('updatePermission').hidden=!state.ready||state.permission;$('updatePermission').disabled=state.busy;
       $('updateDiscard').hidden=!state.ready;$('updateDiscard').disabled=state.busy||state.phase==='awaiting_user';
@@ -69,5 +81,5 @@ export function mountUpdates(){
   let appListener;
   void App.addListener('appStateChange',e=>{if(!closed&&e.isActive)void controller.resume().catch(()=>{});})
     .then(h=>{if(closed)void h.remove();else appListener=h;}).catch(()=>{});
-  window.addEventListener('pagehide',()=>{closed=true;answer(false);progress.destroy();panel.remove();void controller.destroy();void appListener?.remove();},{once:true});
+  window.addEventListener('pagehide',()=>{closed=true;answer(false);updateLog.destroy();progress.destroy();panel.remove();void controller.destroy();void appListener?.remove();},{once:true});
 }

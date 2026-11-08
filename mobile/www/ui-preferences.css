@@ -37,3 +37,9 @@
 .shell .bottom .q-tab .nav-avatar{transition:none}
 .shell .bottom .q-tab:active .nav-avatar{transform:translateX(-50%) translateY(2px) scale(.90)}
 .shell .bottom .q-tab[aria-current=page]:active .nav-avatar{transform:translateX(-50%) translateY(-5px) scale(1.06)}
+
+@keyframes hebao-setting-reveal{from{opacity:.6;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:no-preference){
+ .shell #settings details.settings-group[open]>.settings-group-body{animation:hebao-setting-reveal .16s ease-out}
+ .shell #settings details:not(.settings-group)[open]>:not(summary){animation:hebao-setting-reveal .13s ease-out}
+}

@@ -50,7 +50,22 @@ export function createLayeredMemory({core,indexedDB=globalThis.indexedDB,namespa
  async function setting(key,value){if(key!=='reviewDays')throw Error('设置无效。');if(arguments.length===1)return (await read()).meta[key]??null;
   if(value!==null&&(!Number.isSafeInteger(value)||value<1||value>3650))throw Error('审查间隔须为1～3650天，或留空按需审查。');return write((d,t)=>t.objectStore('meta').put(value,key));}
  const chat=Object.freeze({
-  async context(input,{epoch}={}){const {approved:a,working:w}=snapshot(await read()),blocked=new Set([...fixed.entries,...a].map(e=>e.key));return {core:structuredClone(fixed),counts:{core:fixed.entries.length,approved:a.filter(e=>!e.deleted&&!e.syncConflict).length,pending:w.filter(e=>!e.deleted&&!e.syncConflict&&!e.reviewed&&a.find(n=>n.key===e.key)?.sourceRevision!==e.revision).length},approved:selectLayerEntries(a,input),working:selectLayerEntries(w.filter(e=>!e.syncConflict&&!blocked.has(e.key)&&(e.remote||epoch===undefined||e.sourceEpoch===epoch)),input)};},
+  async context(input,{epoch,sessionSummaries=[]}={}){
+   const {approved:a,working:w}=snapshot(await read());
+   const blocked=new Set([...fixed.entries,...a].map(e=>e.key));
+   const candidates=w.filter(e=>!e.syncConflict&&!blocked.has(e.key)&&(e.remote||epoch===undefined||e.sourceEpoch===epoch));
+   // The current conversation can still read its own saved compaction if the
+   // working-memory queue is full. Existing decisions take precedence.
+   const seen=new Set([...blocked,...w.map(e=>e.key)]);
+   for(const summary of sessionSummaries){
+    const entry=summaryEntry(summary);
+    if(!seen.has(entry.key))candidates.push(entry);
+   }
+   return {core:structuredClone(fixed),counts:{
+    core:fixed.entries.length,approved:a.filter(e=>!e.deleted&&!e.syncConflict).length,
+    pending:w.filter(e=>!e.deleted&&!e.syncConflict&&!e.reviewed&&a.find(n=>n.key===e.key)?.sourceRevision!==e.revision).length
+   },approved:selectLayerEntries(a,input),working:selectLayerEntries(candidates,input)};
+  },
   async archive(){const {approved,working}=snapshot(await read());return {approved:approved.filter(e=>!e.deleted&&!e.syncConflict),working:working.filter(e=>!e.syncConflict&&!e.deleted&&!e.rejected&&!e.reviewed&&!approved.some(a=>a.key===e.key))};},
   syncSummaries(summaries){return gate(async()=>{
    if(!Array.isArray(summaries))throw Error('摘要列表无效。');const entries=summaries.map(summaryEntry);

@@ -13,6 +13,7 @@ HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE/'vendor'))
 import qrcode
 from publisher import Publisher
+from apk_delta import retain_release_ids
 
 def addresses():
     try:
@@ -71,13 +72,14 @@ def main():
         status.set('配对码180秒内有效。配对过的手机可以直接点“检查更新”。')
 
     def cleanup_old(p):
-        # Only our marked, locked release directory; keep one current snapshot.
+        # Keep the current frozen APK and two prior delta bases.
         folder=p.snapshot.parent
+        keep=retain_release_ids(folder,p.release["artifactId"])
         for file in folder.iterdir():
             if file.is_symlink() or file.suffix not in ['.apk','.json']:continue
             try:
                 import uuid
-                if str(uuid.UUID(file.stem))!=file.stem or file.stem==p.release['artifactId']:continue
+                if str(uuid.UUID(file.stem))!=file.stem or file.stem in keep:continue
             except ValueError:continue
             file.unlink(missing_ok=True)
 

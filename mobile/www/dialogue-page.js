@@ -2,6 +2,31 @@
 (function(global){
   const mounted=new WeakMap();
   const uid=()=>global.crypto?.randomUUID?.()||'dl-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+  function presentReply(reply,refs){
+    const sources=[];
+    if(refs?.length){
+      const suffix='\n\n参考书架片段：'+refs.map(r=>r.title+' · '+r.id+' @'+r.revision).join('；');
+      if(reply.endsWith(suffix)){
+        reply=reply.slice(0,-suffix.length);
+        sources.push({label:'参考书架',items:refs.map(r=>({label:r.title}))});
+      }
+    }
+    const marker='\n\n本轮来源：\n',start=reply.lastIndexOf(marker);
+    if(start>=0){
+      const lines=reply.slice(start+marker.length).split('\n');
+      const items=[];
+      for(let i=0;i<lines.length;i+=2){
+        const label=lines[i],url=lines[i+1];
+        if(!/^\[W[1-3]\] .{1,240}（(?:部分网页文字|搜索片段)，带入\d+字）$/.test(label)||!/^https:\/\/[^\s\\]+$/.test(url||''))break;
+        items.push({label,url});
+      }
+      if(items.length&&items.length<=3&&items.length*2===lines.length){
+        reply=reply.slice(0,start);
+        sources.unshift({label:'网页来源',items});
+      }
+    }
+    return {reply,sources};
+  }
   function mount(options){
     const {container,onTurnComplete}=options;
     if(!container)throw Error('对话页需要容器');
@@ -9,14 +34,17 @@
     const listeners=new AbortController();
     const motionPreference=global.matchMedia?.('(prefers-reduced-motion: reduce)'),motions=new Set(),motionByTarget=new WeakMap();
     let followQueued=false,sizedDraft=null;
+    let voiceEpoch=0,composing=false,voiceSubmit=null,voiceWaiting=false;const voiceSubscribers=new Set();
+    function invalidateVoice(reason='context'){voiceEpoch++;for(const listener of voiceSubscribers)listener(reason);}
     let disposed=false,visible=false,mode='live',liveTransport=options.transport||null,openMemoryCallback=options.openMemory||null;
     let sessionId=uid(),generation=0,active=null,turns=[],follow=true,memoryOpen=false,memoryEpoch=0,memoryHandle=null,savedScroll=0;
-    let failDemoNext=false,baselineHeight=global.innerHeight||800;
+    let hiddenScroll=0,visibleScroll=0;
+    let failDemoNext=false,baselineHeight=global.innerHeight||800,baselineWidth=global.innerWidth||0;
     let historyCount=1,compressedRanges=[],historyGesture=false,expanding=false,touchY=null,gestureExpanded=false,lastWheel=0,scrollFrame=null;
     const views=new Map();
     const root=document.createElement('div');root.className='hebao-dialogue';
     root.innerHTML=`<div class="dl-main">
-      <header class="dl-heading"><h2>对话</h2><div class="dl-session-tools"><p class="dl-connection" role="status"></p><details class="dl-demo-tools" hidden><summary aria-label="演示选项">···</summary><div class="dl-tools-popover"><p class="dl-modebar" hidden>界面演示 · 非真实对话，不保存</p><button type="button" class="dl-demo-long">填入长消息</button><button type="button" class="dl-demo-fail">下轮模拟失败：关</button><button type="button" class="dl-demo-exit">退出演示</button></div></details></div></header>
+      <header class="dl-heading"><button type="button" class="dl-exit" aria-label="退出对话" hidden><span aria-hidden="true">‹</span> 退出</button><h2>对话</h2><div class="dl-session-tools"><p class="dl-connection" role="status"></p><details class="dl-demo-tools" hidden><summary aria-label="演示选项">···</summary><div class="dl-tools-popover"><p class="dl-modebar" hidden>界面演示 · 非真实对话，不保存</p><button type="button" class="dl-demo-long">填入长消息</button><button type="button" class="dl-demo-fail">下轮模拟失败：关</button><button type="button" class="dl-demo-exit">退出演示</button></div></details></div></header>
       <div class="dl-scroll" tabindex="0" aria-label="对话与记忆入口">
         <div class="dl-character-stage" data-dialogue-portrait-host><img alt="格莉兹静态半身展示"><small>静态立绘</small></div>
         <div class="dl-chat-card">
@@ -43,7 +71,11 @@
     const on=(target,event,fn,options={})=>target.addEventListener(event,fn,{...options,signal:listeners.signal});
     // The shelf entry and composer stay outside the message scroller. Long
     // replies can no longer push the entry away or drag the input with them.
-    $('.dl-heading').append($('.dl-books'));
+    const exit=$('.dl-exit'),books=$('.dl-books');
+    exit.hidden=typeof options.onExit!=='function';
+    if(!exit.hidden)on(exit,'click',options.onExit);
+    books.setAttribute('aria-label','打开记忆书架');
+    $('.dl-heading').append(books);
     main.append(composer);
     const shelfBack=document.createElement('button');shelfBack.type='button';shelfBack.className='dl-shelf-back';shelfBack.textContent='返回书架';shelfBack.hidden=true;$('.dl-memory-head').append(shelfBack);
     function cancelMotions(){for(const motion of motions){try{motion.cancel();}catch{}}motions.clear();}
@@ -58,8 +90,8 @@
     function available(){return mode==='demo'||typeof liveTransport?.send==='function';}
     function updateControls(){
       composer.hidden=!available();root.dataset.chatReady=String(available());root.dataset.hasTurns=String(turns.length>0);
-      sendButton.textContent=active?'停止':'发送';sendButton.dataset.stop=String(Boolean(active));sendButton.disabled=!active&&(!available()||!input.value.trim());
-      sendButton.setAttribute('aria-label',active?'停止本轮回复':'发送消息');log.setAttribute('aria-busy',String(Boolean(active)));
+      sendButton.textContent=active?'停止':'发送';sendButton.dataset.stop=String(Boolean(active));sendButton.disabled=!active&&(!available()||voiceWaiting||(!voiceSubmit&&!input.value.trim()));
+      sendButton.setAttribute('aria-label',active?'停止本轮回复':voiceSubmit?'发送语音文字':'发送消息');log.setAttribute('aria-busy',String(Boolean(active)));
       connection.textContent=mode==='demo'?'演示 · 非真实对话':available()?'对话已连接':'尚未连接API';
       root.dataset.replyState=active?.turn.state||'idle';$('.dl-presence').textContent=active?(active.turn.state==='streaming'?'回复中':'等待回复'):mode==='demo'?'界面演示':available()?'文字对话':'等待连接';
       $('.dl-modebar').hidden=mode!=='demo';$('.dl-demo-tools').hidden=mode!=='demo';
@@ -92,7 +124,8 @@
       const article=document.createElement('article');article.className='dl-turn';
       function message(role,label){const node=document.createElement('div');node.className='dl-message dl-message-'+role;const meta=document.createElement('p');meta.className='dl-meta';meta.textContent=label;const bubble=document.createElement('div');bubble.className='dl-bubble';node.append(meta,bubble);article.append(node);return {node,meta,bubble};}
       const user=message('user','你'),assistant=message('assistant',turn.mode==='demo'?'演示回复':'格莉兹');const note=document.createElement('div');note.className='dl-result-note';article.append(note);log.append(article);
-      const view={article,user,assistant,note,replyText:null,waitingShown:false,noteKey:null};views.set(turn.id,view);if(!memoryOpen&&active?.turn===turn){entrance(user.node,5);entrance(assistant.node,3);}return view;
+      const sources=document.createElement('div');sources.className='dl-sources';assistant.node.append(sources);
+      const view={article,user,assistant,note,sources,presentation:null,replyText:null,waitingShown:false,noteKey:null};views.set(turn.id,view);if(!memoryOpen&&active?.turn===turn){entrance(user.node,5);entrance(assistant.node,3);}return view;
     }
     function updateTurn(turn){
       const view=getView(turn);if(view.user.bubble.textContent!==turn.input)view.user.bubble.textContent=turn.input;
@@ -101,10 +134,32 @@
       if(turn.state==='waiting'&&!turn.reply){
         if(!view.waitingShown){const star=document.createElement('span');star.className='dl-wait-star';star.setAttribute('aria-hidden','true');star.textContent='✦';view.assistant.bubble.replaceChildren(star,document.createTextNode('等待回复…'));view.waitingShown=true;view.replyText=null;}
       }else{
-        const text=turn.reply||'本轮没有生成回复。';
+        const text=(turn.presentation?.reply??turn.reply)||'本轮没有生成回复。';
         if(!view.replyText){view.replyText=document.createTextNode(text);view.assistant.bubble.replaceChildren(view.replyText);}
         else if(view.replyText.data!==text)view.replyText.data=text;
         view.waitingShown=false;
+      }
+      if(view.presentation!==(turn.presentation??null)){
+        view.presentation=turn.presentation??null;
+        view.sources.replaceChildren();
+        for(const {label,items} of view.presentation?.sources||[]){
+          const details=document.createElement('details'),summary=document.createElement('summary'),list=document.createElement('ul');
+          summary.textContent=label+'（'+items.length+'）';
+          for(const item of items){
+            const li=document.createElement('li');li.textContent=item.label;
+            if(item.url){
+              try{
+                const url=new URL(item.url);
+                if(url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&!url.hash){
+                  const link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=url.hostname;
+                  li.append(' · ',link);
+                }
+              }catch{}
+            }
+            list.append(li);
+          }
+          details.append(summary,list);view.sources.append(details);
+        }
       }
       // Keep unchanged text and controls mounted across stream updates. This
       // avoids re-entering bubbles, losing text selection, or dropping focus.
@@ -164,7 +219,7 @@
     }
     async function run(turn){
       if(disposed||active||!available()||turn!==turns.at(-1))return false;
-      turn.state='waiting';turn.reply='';follow=true;more.hidden=true;
+      turn.state='waiting';turn.reply='';turn.presentation=null;follow=true;more.hidden=true;
       const request={generation:++generation,session:sessionId,controller:new AbortController(),turn,mode};active=request;draw();afterUpdate();
       try{
         const payload={input:turn.input,messages:[...history(turn),{role:'user',content:turn.input}],signal:request.controller.signal,onDelta:delta=>{
@@ -176,25 +231,26 @@
         if(!valid(request))return false;
         if(!result||typeof result.reply!=='string'||!result.reply.trim()||result.reply.length>100000)throw Error('invalid reply');
         // Final text replaces all streamed fragments; never append it a second time.
-        turn.reply=result.reply;turn.state='complete';turn.responseId=typeof result.id==='string'?result.id:uid();active=null;draw();afterUpdate();
+        turn.reply=result.reply;turn.presentation=presentReply(turn.reply,result.shelfUse?.refs);turn.state='complete';turn.responseId=typeof result.id==='string'?result.id:uid();active=null;draw();afterUpdate();
         const detail={id:turn.responseId,sessionId:request.session,messages:history(),createdAt:new Date().toISOString(),mode:request.mode};
         if(typeof onTurnComplete==='function')Promise.resolve().then(()=>{if(!disposed&&request.generation===generation&&request.session===sessionId)return onTurnComplete(detail);}).catch(()=>{if(!disposed&&request.generation===generation&&request.session===sessionId)$('.dl-input-note').textContent='回复已完成，接收结果尚未确认';});
         return true;
       }catch(error){if(!valid(request))return false;active=null;turn.state='failed';draw();afterUpdate();return false;}
     }
     function send(){
-      if(active)return cancel();const text=input.value.trim();if(!text||!available()||disposed)return false;
+      if(active){invalidateVoice();return cancel();}if(voiceWaiting)return false;if(voiceSubmit)return voiceSubmit();
+      invalidateVoice();const text=input.value.trim();if(!text||!available()||disposed)return false;
       const turn={id:uid(),input:text,reply:'',state:'waiting',mode};turns.push(turn);input.value='';run(turn);return true;
     }
     function clearSession(id=uid()){
-      cancel();cancelMotions();$('.dl-demo-tools').open=false;generation++;sessionId=id;turns=[];historyCount=1;compressedRanges=[];historyGesture=false;views.clear();follow=true;scroller.scrollTop=0;draw();
+      invalidateVoice();cancel();cancelMotions();$('.dl-demo-tools').open=false;generation++;sessionId=id;turns=[];historyCount=1;compressedRanges=[];historyGesture=false;views.clear();follow=true;scroller.scrollTop=0;draw();
     }
     function enterDemo(){if(disposed||active||mode==='demo')return;closeMemory(false);mode='demo';clearSession();updateControls();input.focus();}
     function exitDemo(){if(mode!=='demo')return;cancel();mode='live';failDemoNext=false;clearSession();}
     function disposeMemory(handle){try{if(typeof handle==='function')handle();else if(typeof handle?.destroy==='function')handle.destroy();else handle?.close?.();}catch{}}
     function placeholder(text,small){const node=document.createElement('div');node.className='dl-memory-placeholder';const p=document.createElement('p');p.textContent=text;const hint=document.createElement('small');hint.textContent=small;node.append(p,hint);return node;}
     async function openMemory(){
-      if(disposed||memoryOpen)return;$('.dl-demo-tools').open=false;memoryOpen=true;const ticket=++memoryEpoch;savedScroll=scroller.scrollTop;cancelMotions();main.hidden=true;memoryPanel.hidden=false;entrance(memoryPanel,6);
+      if(disposed||memoryOpen)return;$('.dl-demo-tools').open=false;memoryOpen=true;invalidateVoice();const ticket=++memoryEpoch;savedScroll=scroller.scrollTop;cancelMotions();main.hidden=true;memoryPanel.hidden=false;entrance(memoryPanel,6);
       root.dataset.memoryView='shelf';$('.dl-memory-head h2').textContent='记忆书架';shelfBack.hidden=true;
       const child=document.createElement('div');child.className='dl-memory-mount';child.dataset.memoryLayout='mobile';child.style.height='100%';host.replaceChildren(child);$('.dl-back').focus({preventScroll:true});
       if(typeof openMemoryCallback!=='function'){child.append(placeholder('记忆书架尚未接入','返回对话后，草稿和消息会留在原处。'));return;}
@@ -204,19 +260,25 @@
       }catch{if(ticket===memoryEpoch&&!disposed)child.replaceChildren(placeholder('记忆书架暂时打不开','可以先返回对话，稍后再试。'));}
     }
     function closeMemory(focus=true){
-      if(!memoryOpen)return;memoryOpen=false;memoryEpoch++;const handle=memoryHandle;memoryHandle=null;disposeMemory(handle);host.replaceChildren();cancelMotions();memoryPanel.hidden=true;main.hidden=false;if(focus)entrance(main,3);
+      if(!memoryOpen)return;memoryOpen=false;invalidateVoice();memoryEpoch++;const handle=memoryHandle;memoryHandle=null;disposeMemory(handle);host.replaceChildren();cancelMotions();memoryPanel.hidden=true;main.hidden=false;if(focus)entrance(main,3);
       const closeSession=sessionId,closeEpoch=memoryEpoch;requestAnimationFrame(()=>{if(!disposed&&!memoryOpen&&closeSession===sessionId&&closeEpoch===memoryEpoch){scroller.scrollTop=savedScroll;if(focus&&visible)$('.dl-books').focus({preventScroll:true});}});
     }
     function viewport(){
       if(disposed)return;const shell=container.closest('.shell');if(!shell)return;
-      if(!visible){delete shell.dataset.dialogueKeyboard;shell.style.removeProperty('--dialogue-viewport-height');return;}
-      const height=Math.min(global.innerHeight||800,global.visualViewport?.height||Infinity),focused=document.activeElement===input;
-      if(!focused)baselineHeight=Math.max(height,global.innerHeight||height);
-      shell.dataset.dialogueKeyboard=String(focused&&baselineHeight-height>120);
-      shell.style.setProperty('--dialogue-viewport-height',Math.max(200,height)+'px');resizeInput();
+      if(!visible){delete shell.dataset.dialogueKeyboard;delete shell.dataset.dialogueCompact;shell.style.removeProperty('--dialogue-viewport-height');return;}
+      const visual=global.visualViewport,zoomed=visual&&Math.abs((visual.scale||1)-1)>.01;
+      const height=Math.min(global.innerHeight||800,zoomed?Infinity:visual?.height||Infinity),width=global.innerWidth||0;
+      const focused=root.contains(document.activeElement)&&document.activeElement.matches('input,textarea,[contenteditable="true"]');
+      // Rotation changes the layout width too; it is not evidence of a keyboard.
+      const wasReduced=shell.dataset.dialogueKeyboard==='true';
+      if((!focused&&!wasReduced)||width!==baselineWidth){baselineHeight=Math.max(height,global.innerHeight||height);baselineWidth=width;}
+      shell.dataset.dialogueKeyboard=String(!zoomed&&(focused||wasReduced)&&baselineHeight-height>120);
+      shell.dataset.dialogueCompact=String(height<=520);
+      shell.style.setProperty('--dialogue-viewport-height',Math.max(1,height)+'px');resizeInput();
     }
     on($('.dl-compose'),'submit',e=>{e.preventDefault();send();});
-    on(input,'input',()=>{resizeInput();updateControls();if(follow&&turns.length)afterUpdate();});on(input,'focus',()=>{$('.dl-demo-tools').open=false;viewport();});on(input,'blur',()=>requestAnimationFrame(viewport));
+    on(input,'compositionstart',()=>{composing=true;invalidateVoice();});on(input,'compositionend',()=>{composing=false;invalidateVoice();});
+    on(input,'input',()=>{invalidateVoice();resizeInput();updateControls();if(follow&&turns.length)afterUpdate();});on(input,'focus',()=>{$('.dl-demo-tools').open=false;viewport();});on(input,'blur',()=>requestAnimationFrame(viewport));
     on(input,'keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)&&!e.isComposing&&e.keyCode!==229){e.preventDefault();send();}});
     on($('.dl-earlier'),'click',expandEarlier);on($('.dl-collapse'),'click',collapseHistory);
     on(scroller,'wheel',event=>{if(event.timeStamp-lastWheel>220)gestureExpanded=false;lastWheel=event.timeStamp;if(event.deltaY<0)olderGesture();else{historyGesture=false;gestureExpanded=false;}},{passive:true});
@@ -224,7 +286,7 @@
     on(scroller,'touchmove',event=>{const y=event.touches[0]?.clientY;if(touchY!==null&&y-touchY>12)olderGesture();else if(touchY!==null&&y-touchY< -12)historyGesture=false;},{passive:true});
     on(scroller,'touchend',()=>{touchY=null;},{passive:true});on(scroller,'touchcancel',()=>{touchY=null;},{passive:true});
     on(scroller,'keydown',event=>{if(event.target===scroller&&['ArrowUp','PageUp','Home'].includes(event.key)){gestureExpanded=false;olderGesture();}});
-    on(scroller,'scroll',()=>{if(scrollFrame!==null)return;scrollFrame=requestAnimationFrame(()=>{scrollFrame=null;if(disposed||!visible)return;if(historyGesture)olderGesture();if(!historyGesture&&!expanding)follow=latestEdge()-scroller.scrollTop<50;more.hidden=follow||!turns.length;});},{passive:true});
+    on(scroller,'scroll',()=>{if(visible&&scroller.clientHeight>0)visibleScroll=scroller.scrollTop;if(scrollFrame!==null)return;scrollFrame=requestAnimationFrame(()=>{scrollFrame=null;if(disposed||!visible)return;if(historyGesture)olderGesture();if(!historyGesture&&!expanding)follow=latestEdge()-scroller.scrollTop<50;more.hidden=follow||!turns.length;});},{passive:true});
     on(more,'click',()=>{historyGesture=false;follow=true;more.hidden=true;scroller.scrollTop=latestEdge();});
     on($('.dl-demo-exit'),'click',()=>{$('.dl-demo-tools').open=false;exitDemo();});on($('.dl-demo-long'),'click',()=>{$('.dl-demo-tools').open=false;input.value='【合成长消息】\n这是一条用于查看窄屏排版的测试输入，不是真实聊天或记忆。\n\n'+('这一段用于检查长文字自动换行、输入框高度、消息滚动和键盘下的发送位置。'.repeat(8));updateControls();input.focus();});
     on($('.dl-demo-fail'),'click',()=>{failDemoNext=!failDemoNext;updateControls();});
@@ -233,6 +295,7 @@
     on(host,'memory-books:view',event=>{root.dataset.memoryView=event.detail.view;shelfBack.hidden=event.detail.view!=='reader';$('.dl-memory-head h2').textContent=event.detail.view==='reader'?event.detail.monthLabel:'记忆书架';});
     on(root,'pointerdown',event=>{if(!event.target.closest?.('.dl-demo-tools'))$('.dl-demo-tools').open=false;});
     on(root,'keydown',event=>{if(event.key==='Escape'&&$('.dl-demo-tools').open){$('.dl-demo-tools').open=false;$('.dl-demo-tools summary').focus({preventScroll:true});event.preventDefault();}});
+    on(root,'focusin',viewport);on(root,'focusout',()=>requestAnimationFrame(viewport));
     on(global,'resize',viewport);if(global.visualViewport){on(global.visualViewport,'resize',viewport);on(global.visualViewport,'scroll',viewport);}
     if(motionPreference?.addEventListener)on(motionPreference,'change',cancelMotions);
     function validateRanges(ranges,length){
@@ -241,22 +304,40 @@
     }
     const api=Object.freeze({
       setCompressedRanges({id,ranges}){if(disposed||id!==sessionId)return;compressedRanges=validateRanges(ranges,history().length);draw();afterUpdate();},
-      setVisible(value){if(disposed)return;const wasVisible=visible;visible=Boolean(value);if(!visible){$('.dl-demo-tools').open=false;cancelMotions();cancel();closeMemory(false);}viewport();if(visible&&!wasVisible){collapseHistory();entrance(main,4);}},
-      setTransport(value){if(disposed)return;if(value!==null&&typeof value?.send!=='function')throw Error('transport需要send函数');cancel();liveTransport=value;if(mode==='demo'){mode='live';clearSession();}draw();},
+      setVisible(value){if(disposed)return;const wasVisible=visible;if(wasVisible&&!value)hiddenScroll=memoryOpen?savedScroll:visibleScroll;const visibilityChanged=visible!==Boolean(value);visible=Boolean(value);if(visibilityChanged)invalidateVoice();if(!visible){$('.dl-demo-tools').open=false;cancelMotions();cancel();closeMemory(false);}viewport();if(visible&&!wasVisible){scroller.scrollTop=follow?latestEdge():hiddenScroll;more.hidden=follow||!turns.length;entrance(main,4);}},
+      setTransport(value){if(disposed)return;if(value!==null&&typeof value?.send!=='function')throw Error('transport需要send函数');cancel();liveTransport=value;invalidateVoice();if(mode==='demo'){mode='live';clearSession();}draw();},
       setOpenMemory(value){if(disposed)return;if(value!==null&&typeof value!=='function')throw Error('openMemory需要函数');closeMemory(false);openMemoryCallback=value;},
       newSession({id=uid()}={}){if(disposed)return;if(typeof id!=='string'||!id)throw Error('无效会话编号');closeMemory(false);clearSession(id);input.value='';updateControls();},
-      restoreSession({id,messages,draft='',compressed=[]}){
+      restoreSession({id,messages,draft='',compressed=[],shelfRanges=[]}){
         if(disposed)return;
         if(typeof id!=='string'||!id||!Array.isArray(messages)||messages.length%2||messages.length>20000||typeof draft!=='string')throw Error('保存的会话不完整。');
         for(let i=0;i<messages.length;i++)if(messages[i]?.role!==(i%2?'assistant':'user')||typeof messages[i]?.content!=='string'||messages[i].content.length>12000)throw Error('保存的消息不完整。');
         closeMemory(false);mode='live';clearSession(id);
-        for(let i=0;i<messages.length;i+=2)turns.push({id:'restored-'+i,input:messages[i].content,reply:messages[i+1].content,state:'complete',mode:'live'});
+        const refsByTurn=new Map(shelfRanges.map(({start,receipt})=>[start,receipt?.refs]));
+        for(let i=0;i<messages.length;i+=2){
+          const reply=messages[i+1].content;
+          turns.push({id:'restored-'+i,input:messages[i].content,reply,presentation:presentReply(reply,refsByTurn.get(i)),state:'complete',mode:'live'});
+        }
         compressedRanges=validateRanges(compressed,messages.length);input.value=draft.slice(0,12000);draw();afterUpdate();
       },
       getSnapshot(){return {id:sessionId,mode,draft:input.value,messages:history(),turns:turns.map(t=>({...t})),pending:Boolean(active),scrollTop:scroller.scrollTop,memoryOpen};},
+      setVoiceSubmit(handler,waiting=false){if(disposed)return;voiceSubmit=handler;voiceWaiting=waiting;updateControls();},
+      sendVoiceText(){if(disposed||!visible||memoryOpen||active)return false;return send();},
       getVoiceSlot(){return $('[data-dialogue-voice-slot]');},
+      getVoiceContext(){return {id:sessionId,epoch:voiceEpoch,value:input.value,start:input.selectionStart,end:input.selectionEnd,maxLength:input.maxLength,composing,active:!disposed&&visible&&!memoryOpen&&available()};},
+      subscribeVoiceContext(listener){voiceSubscribers.add(listener);return ()=>voiceSubscribers.delete(listener);},
+      insertVoiceText(context,text){
+        if(disposed||!visible||memoryOpen||!available()||composing||context.id!==sessionId||context.epoch!==voiceEpoch||context.value!==input.value)return {applied:false,code:'stale'};
+        if(typeof text!=='string'||!text.trim())return {applied:false,code:'empty_result'};
+        const safe=Number.isInteger(context.start)&&Number.isInteger(context.end)&&context.start>=0&&context.end>=context.start&&context.end<=input.value.length;
+        const start=safe?context.start:input.value.length,end=safe?context.end:input.value.length;
+        const next=input.value.slice(0,start)+text+input.value.slice(end);
+        if(next.length>input.maxLength)return {applied:false,code:'too_long'};
+        input.value=next;input.setSelectionRange(start+text.length,start+text.length);
+        input.dispatchEvent(new Event('input',{bubbles:true}));return {applied:true};
+      },
       openMemory,closeMemory,
-      destroy(){if(disposed)return;cancel();closeMemory(false);disposed=true;generation++;cancelMotions();if(scrollFrame!==null)cancelAnimationFrame(scrollFrame);listeners.abort();const shell=container.closest('.shell');if(shell){delete shell.dataset.dialogueKeyboard;shell.style.removeProperty('--dialogue-viewport-height');shell.style.removeProperty('--dl-art-scene');}container.replaceChildren();mounted.delete(container);}
+      destroy(){if(disposed)return;invalidateVoice('destroy');voiceSubscribers.clear();cancel();closeMemory(false);disposed=true;generation++;cancelMotions();if(scrollFrame!==null)cancelAnimationFrame(scrollFrame);listeners.abort();const shell=container.closest('.shell');if(shell){delete shell.dataset.dialogueKeyboard;delete shell.dataset.dialogueCompact;shell.style.removeProperty('--dialogue-viewport-height');shell.style.removeProperty('--dl-art-scene');}container.replaceChildren();mounted.delete(container);}
     });
     mounted.set(container,api);draw();return api;
   }

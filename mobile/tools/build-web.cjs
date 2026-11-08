@@ -1,3 +1,4 @@
+require('child_process').execFileSync(process.execPath,['tools/check-update-log.cjs'],{stdio:'inherit'});
 const mode=process.argv.includes('--private')?'private':'public';
 require('child_process').execFileSync(process.env.HEBAO_PYTHON||'python',['tools/build-core.py','--mode',mode],{stdio:'inherit'});
 const fs=require('fs');
@@ -10,9 +11,9 @@ const versionTag=/<span class="splash-version" data-app-version[^>]*>[^<]*<\/spa
 if((opening.match(versionTag)||[]).length!==1)throw Error('Opening version label is missing or duplicated.');
 fs.writeFileSync('www/index.html',opening.replace(versionTag,'<span class="splash-version" data-app-version aria-label="版本 '+versionMatch[1]+'">v'+versionMatch[1]+'</span>'));
 
-// Share the accepted read-only book renderer with desktop; all data stays local.
+// Share visual assets with desktop. The mobile renderer has its own shelf layout and is tracked in www/.
 const sharedBooks=path.resolve('../src/workbench/static');
-for(const name of ['memory-books.js','memory-books.css','task-progress.css','progress-libao.png'])fs.copyFileSync(path.join(sharedBooks,name),path.join('www',name));
+for(const name of ['memory-books.css','task-progress.css','progress-libao.png'])fs.copyFileSync(path.join(sharedBooks,name),path.join('www',name));
 fs.mkdirSync('www/assets',{recursive:true});
 for(const month of [10,11,12]){const name='cover-'+month+'.png';fs.copyFileSync(path.join(sharedBooks,'assets',name),path.join('www/assets',name));}
 const esbuild=require('esbuild');

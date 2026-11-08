@@ -77,9 +77,10 @@ final class PinnedHttp implements Closeable {
             if(status!=200){
                 String code=status==401?"authentication_failed":"integrity_failed";
                 if(length<=16384){
-                    try{String given=json().getString("code");if(Arrays.asList("pairing_expired","pairing_replayed","busy","authentication_failed","integrity_failed","invalid_input","range_not_supported","memory_failed","memory_unavailable").contains(given))code=given;}
+                    try{String given=json().getString("code");if(Arrays.asList("pairing_expired","pairing_replayed","busy","authentication_failed","integrity_failed","invalid_input","range_not_supported","delta_unavailable","memory_failed","memory_unavailable").contains(given))code=given;}
                     catch(Exception ignored){}
                 }
+                if(status==404&&path.equals("/v1/apk-delta"))code="delta_unavailable";
                 throw new TransportRules.Failure(code);
             }
         }catch(Exception e){if(secured!=null)try{secured.close();}catch(Exception ignored){}else try{raw.close();}catch(Exception ignored){}throw e;}

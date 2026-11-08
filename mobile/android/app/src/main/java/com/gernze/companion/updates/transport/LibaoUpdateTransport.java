@@ -44,6 +44,7 @@ public class LibaoUpdateTransport extends Plugin {
         JSONObject peer;
         DownloadCache cache;
         long total=0;
+        String transferKind="full";
         Job(PluginCall call,String key,String downloadId,String pairingId){
             this.call=call;this.key=key;this.downloadId=downloadId;this.pairingId=pairingId;generation=epoch;
             deadline=SystemClock.elapsedRealtime()+(downloadId==null?30000:1200000);
@@ -98,7 +99,7 @@ public class LibaoUpdateTransport extends Plugin {
                     if(!finalEvent){job.check();if(job.settled)return;}
                     else if(!job.settled||destroyed||!active||job.generation!=epoch)return;
                     JSObject event=new JSObject();event.put("downloadId",job.downloadId);
-                    event.put("receivedBytes",received);event.put("totalBytes",job.total);notifyListeners("updateProgress",event);
+                    event.put("transferKind",job.transferKind);event.put("receivedBytes",received);event.put("totalBytes",job.total);notifyListeners("updateProgress",event);
                 }catch(Exception ignored){}
             }
         });
@@ -238,6 +239,35 @@ public class LibaoUpdateTransport extends Plugin {
     @PluginMethod public void codexEvents(PluginCall call){codexPost(call,"/v1/codex/events");}
     @PluginMethod public void codexAck(PluginCall call){codexPost(call,"/v1/codex/ack");}
 
+    private boolean downloadDelta(Job job,JSONObject release) throws Exception {
+        java.io.File installed=new java.io.File(getContext().getApplicationInfo().sourceDir);
+        if(!installed.isFile())return false;
+        try(java.io.RandomAccessFile base=new java.io.RandomAccessFile(installed,"r")){
+            String baseHash=ApkDelta.hash(base,job::check);
+            JSONObject request=new JSONObject().put("artifactId",release.getString("artifactId"))
+                .put("baseSha256",baseHash).put("baseSize",base.length());
+            String expectedTag = '"' + release.getString("sha256") + '"';
+            try(PinnedHttp http=new PinnedHttp(job.peer,"POST","/v1/apk-delta",request,job)){
+                TransportRules.require("application/vnd.gernze.apk-delta-v1".equals(http.headers.get("content-type"))&&
+                    expectedTag.equals(http.headers.get("etag")),"integrity_failed");
+                job.total=http.length;job.transferKind="delta";progress(job,0,false);
+                final long[] last={0};
+                try{
+                    ApkDelta.apply(base,baseHash,release.getString("sha256"),release.getLong("size"),
+                        http.input,http.length,job.cache.output,job::check,received->{
+                            long now=SystemClock.elapsedRealtime();
+                            if(now-last[0]>=150){progress(job,Math.min(received,job.total-1),false);last[0]=now;}
+                        });
+                }catch(java.io.IOException e){throw new TransportRules.Failure("integrity_failed");}
+                return true;
+            }catch(TransportRules.Failure e){
+                // Only an unsupported/unavailable delta may use the full transfer.
+                // A damaged patch or lost authorization stops this download.
+                if(e.code.equals("delta_unavailable"))return false;
+                throw e;
+            }
+        }
+    }
     @PluginMethod public void download(PluginCall call){
         try{
             TransportRules.keys(call.getData(),"pairingId","artifactId","downloadId");
@@ -246,20 +276,22 @@ public class LibaoUpdateTransport extends Plugin {
                 job.peer=store().get(pair);JSONObject r=fetchRelease(job);
                 TransportRules.require(r.getString("artifactId").equals(artifact),"release_changed");
                 job.total=r.getLong("size");job.cache=new DownloadCache(getContext(),id);
-                MessageDigest digest=MessageDigest.getInstance("SHA-256");long received=0,last=0;
-                try(PinnedHttp http=new PinnedHttp(job.peer,"GET","/v1/artifacts/"+artifact,null,job)){
-                    TransportRules.require(http.length==job.total&&"application/vnd.android.package-archive".equals(http.headers.get("content-type"))&&
-                        ("\""+r.getString("sha256")+"\"").equals(http.headers.get("etag")),"integrity_failed");
-                    byte[] block=new byte[65536];int n;
-                    while((n=http.input.read(block))!=-1){
-                        job.check();received+=n;TransportRules.require(received<=job.total,"integrity_failed");
-                        try{job.cache.output.write(block,0,n);}catch(java.io.IOException e){throw new TransportRules.Failure("private_storage_failed");}digest.update(block,0,n);
-                        long now=SystemClock.elapsedRealtime();if(now-last>=150){progress(job,Math.min(received,job.total-1),false);last=now;}
+                if(!downloadDelta(job,r)){
+                    MessageDigest digest=MessageDigest.getInstance("SHA-256");long received=0,last=0;
+                    try(PinnedHttp http=new PinnedHttp(job.peer,"GET","/v1/artifacts/"+artifact,null,job)){
+                        TransportRules.require(http.length==job.total&&"application/vnd.android.package-archive".equals(http.headers.get("content-type"))&&
+                            ("\""+r.getString("sha256")+"\"").equals(http.headers.get("etag")),"integrity_failed");
+                        byte[] block=new byte[65536];int n;
+                        while((n=http.input.read(block))!=-1){
+                            job.check();received+=n;TransportRules.require(received<=job.total,"integrity_failed");
+                            try{job.cache.output.write(block,0,n);}catch(java.io.IOException e){throw new TransportRules.Failure("private_storage_failed");}digest.update(block,0,n);
+                            long now=SystemClock.elapsedRealtime();if(now-last>=150){progress(job,Math.min(received,job.total-1),false);last=now;}
+                        }
                     }
+                    TransportRules.require(received==job.total&&TransportRules.hex(digest.digest()).equals(r.getString("sha256")),"integrity_failed");
                 }
-                TransportRules.require(received==job.total&&TransportRules.hex(digest.digest()).equals(r.getString("sha256")),"integrity_failed");
                 job.check();try{job.cache.stage(r,id);}catch(java.io.IOException e){throw new TransportRules.Failure("private_storage_failed");}
-                JSObject result=value("downloaded");result.put("downloadId",id);return result;
+                JSObject result=value("downloaded");result.put("downloadId",id);result.put("transferKind",job.transferKind);return result;
             });
         }catch(Exception e){call.reject(message(errorCode(e)),errorCode(e));}
     }

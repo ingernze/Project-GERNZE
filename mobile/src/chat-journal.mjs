@@ -1,3 +1,4 @@
+import {validateShelfRanges} from './bookshelf-use.mjs';
 import {createResearchCache} from './research-cache.mjs';
 import {validateUse,hashText,sourceMetadata} from './research-use.mjs';
 import {pickSummary,summaryBlocked} from './summary-policy.mjs';
@@ -17,6 +18,7 @@ export function validateSnapshot(value){
       last=r.start;ids.add(r.requestId);
     }
   }
+  validateShelfRanges(value);
   return structuredClone(value);
 }
 export function createChatJournal({indexedDB=globalThis.indexedDB,name='hebao-chat-journal-v1'}={}){
@@ -37,7 +39,7 @@ export function createChatJournal({indexedDB=globalThis.indexedDB,name='hebao-ch
     enqueue(tx,v=>result=v);tx.oncomplete=()=>resolve(result);tx.onabort=tx.onerror=()=>reject(Error('本机记录读取失败。'));
   });}
   const researchCache=createResearchCache({indexedDB,database:open});
-  async function save(snapshot,{signal,expectedMemoryEpoch,expectedSession,researchUse=null}={}){
+  async function save(snapshot,{signal,expectedMemoryEpoch,expectedSession,researchUse=null,beforeCommit=()=>{}}={}){
     const value=validateSnapshot(snapshot);
     if(researchUse){researchUse=structuredClone(researchUse);validateUse(researchUse,value);if(value.messages.length<2||await hashText(value.messages.at(-2).content)!==researchUse.request.inputHash)throw memoryError('研究提问与来源凭据不符。','context_changed');}
     if(signal?.aborted)throw memoryError('已取消保存。','cancelled');const db=await open();
@@ -57,6 +59,9 @@ export function createChatJournal({indexedDB=globalThis.indexedDB,name='hebao-ch
           const previous=e.target.result||null;
           if((researchUse||previous?.researchRanges?.length)&&tx.durability!=='strict'){error=Error('当前WebView不支持可靠研究原文保存。');abort();return;}
           if(expectedSession!==undefined&&canonical(previous)!==canonical(expectedSession)){conflict();return;}
+          const oldShelf=previous?.shelfRanges||[],newShelf=value.shelfRanges||[];
+          if(canonical(newShelf.slice(0,oldShelf.length))!==canonical(oldShelf)||newShelf.length>oldShelf.length+1||newShelf.length>oldShelf.length&&(newShelf.at(-1).start!==value.messages.length-2||previous&&previous.messages.length!==value.messages.length-2)){conflict();return;}
+          if(oldShelf.some(r=>[r.start,r.start+1].some(i=>canonical(previous.messages[i])!==canonical(value.messages[i])))){conflict();return;}
           const ranges=structuredClone(previous?.researchRanges||[]);
           if(value.researchRanges&&canonical(value.researchRanges)!==canonical(ranges)){conflict();return;}
           if(ranges.some(r=>r.start+1>=value.messages.length)){conflict();return;}
@@ -66,7 +71,7 @@ export function createChatJournal({indexedDB=globalThis.indexedDB,name='hebao-ch
             if(ranges.length)value.researchRanges=ranges;else delete value.researchRanges;
             meta.get('summaryClock:'+value.id).onsuccess=e=>guard(()=>{
               if(e.target.result===undefined){const old=previous||value,first=old.messageTimes?.find(t=>t&&Number.isFinite(Date.parse(t)))||old.updatedAt,clock=Date.parse(first);if(Number.isFinite(clock))meta.put(clock,'summaryClock:'+value.id);}
-              sessions.put(value);meta.put(value.id,'selected');
+              beforeCommit();sessions.put(value);meta.put(value.id,'selected');
             });
           };
           if(!researchUse){commit();return;}
@@ -161,10 +166,10 @@ export function createChatJournal({indexedDB=globalThis.indexedDB,name='hebao-ch
     get('summaries',undefined,v=>view.summaries=v.filter(s=>s.sessionId===sessionId));
   }
   const matches=(plan,next)=>next&&plan.id===next.id&&plan.sessionId===next.sessionId&&plan.epoch===next.epoch&&plan.start===next.start&&plan.end===next.end&&plan.sourceText===next.sourceText&&plan.cycle?.id===next.cycle.id&&plan.cycle.epoch===next.cycle.epoch&&plan.cycle.end===next.cycle.end;
-  async function claimSummary(plan,latest){const db=await open();return new Promise((resolve,reject)=>{
+  async function claimSummary(plan,latest,{historyRoom}={}){const db=await open();return new Promise((resolve,reject)=>{
     const tx=db.transaction(['meta','sessions','summaries'],'readwrite');let accepted=false;const meta=tx.objectStore('meta');
     summaryView(tx,plan.sessionId,view=>{
-      if(!matches(plan,pickSummary(view))||latest!==view.session.messages.length)return;
+      if(!matches(plan,pickSummary(view,historyRoom))||latest!==view.session.messages.length)return;
       meta.get('summaryAttempt:'+plan.sessionId).onsuccess=e=>{
         const a=e.target.result;
         // Only a committed success unlocks the next source range. Pending/failed/legacy claims keep the existing bill guard.
@@ -176,7 +181,7 @@ export function createChatJournal({indexedDB=globalThis.indexedDB,name='hebao-ch
     });
     tx.oncomplete=()=>resolve(accepted);tx.onabort=tx.onerror=()=>reject(Error('摘要状态未保存。'));
   });}
-  async function commitSummary(plan,{signal}={}){
+  async function commitSummary(plan,{signal,historyRoom}={}){
     const {id,sessionId,epoch,start,end,text,anchors,sourceText,sourceAt,updatedAt}=plan;
     if(typeof text!=='string'||text.length>2000||start%2||end%2||end<=start)throw Error('摘要无效。');
     if(signal?.aborted)return false;const db=await open();if(signal?.aborted)return false;
@@ -184,7 +189,7 @@ export function createChatJournal({indexedDB=globalThis.indexedDB,name='hebao-ch
       const tx=db.transaction(['meta','sessions','summaries'],'readwrite');let accepted=false;
       const abort=()=>{try{tx.abort();}catch{}};signal?.addEventListener('abort',abort,{once:true});
       summaryView(tx,sessionId,view=>{
-        if(signal?.aborted||!matches(plan,pickSummary(view)))return;
+        if(signal?.aborted||!matches(plan,pickSummary(view,historyRoom)))return;
         const meta=tx.objectStore('meta');meta.get('summaryAttempt:'+sessionId).onsuccess=e=>{
           const attempt=e.target.result;if(signal?.aborted||attempt?.id!==id||attempt.claimId!==plan.claimId||attempt.status!=='pending')return;
           const saved={id,sessionId,epoch,start,end,text,anchors,sourceAt,updatedAt};
@@ -201,6 +206,7 @@ export function createChatJournal({indexedDB=globalThis.indexedDB,name='hebao-ch
       tx.oncomplete=()=>done(()=>resolve(accepted));tx.onabort=tx.onerror=()=>done(()=>signal?.aborted?resolve(false):reject(Error('摘要未保存，原文仍在。')));
     });
   }
+  async function shelfSources(){return read('sessions',(tx,set)=>{const rows=[];set(rows);const r=tx.objectStore('sessions').openCursor();r.onsuccess=()=>{const c=r.result;if(!c)return;if(c.value.shelfRanges?.length)rows.push({id:c.value.id,shelfRanges:c.value.shelfRanges.map(r=>({start:r.start}))});c.continue();};});}
   async function summaries(){return read('summaries',(tx,set)=>{tx.objectStore('summaries').getAll().onsuccess=e=>set(e.target.result);});}
   async function exportExchange(scope){return read(['notes','notePending','revisions','meta'],(tx,set)=>{
     const state={format:'hebao-memory-exchange',version:1,scope_id:scope,records:[],revisions:[],epoch:0};set(state);
@@ -227,5 +233,5 @@ export function createChatJournal({indexedDB=globalThis.indexedDB,name='hebao-ch
       tx.oncomplete=()=>resolve({changed});tx.onabort=tx.onerror=()=>reject(memoryError(conflict?'同步期间记忆有新改动，已保留，稍后重试。':'同步结果未保存。',conflict?'memory_conflict':'memory_invalid'));
     });
   }
-  return Object.freeze({researchVersion:1,researchCache,readResearchTurn,save,load,list,context,changeNote,setting,claimSummary,commitSummary,summaries,exportExchange,applyExchange,async close(){if(opening)(await opening).close();opening=null;}});
+  return Object.freeze({researchVersion:1,shelfSources,researchCache,readResearchTurn,save,load,list,context,changeNote,setting,claimSummary,commitSummary,summaries,exportExchange,applyExchange,async close(){if(opening)(await opening).close();opening=null;}});
 }
