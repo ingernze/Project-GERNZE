@@ -1,6 +1,6 @@
-# GERNZE 1.1.9 源码更新
+# GERNZE 1.1.9 Android 公开版
 
-2026-11-08，Android 构建 56。公开可直接下载安装的版本仍是 [1.1.2](https://github.com/ingernze/Project-GERNZE/releases/tag/v1.1.2)。
+2026-11-08，Android 构建 56。[下载 Android 1.1.9](https://github.com/ingernze/Project-GERNZE/releases/download/v1.1.9/GERNZE-android-1.1.9.apk) · [发行说明和校验文件](https://github.com/ingernze/Project-GERNZE/releases/tag/v1.1.9)。Windows 下载见 [1.1.2](https://github.com/ingernze/Project-GERNZE/releases/tag/v1.1.2)。
 
 | 变化 | 当前范围 |
 | --- | --- |
