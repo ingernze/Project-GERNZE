@@ -150,9 +150,9 @@
       putText(root.querySelector('.mb-bank-index'),`${String(selectedIndex+1).padStart(2,'0')} / ${String(months.length).padStart(2,'0')}`);
       root.querySelector('[data-action="book-prev"]').disabled=!expanded||selectedIndex===0;
       root.querySelector('[data-action="book-next"]').disabled=!expanded||selectedIndex===months.length-1;
-      putText(root.querySelector('.mb-shelf-hint'),expanded?'左右滑动选月 · 点选中的书或下方按钮打开':'先展开书架，再选一本月册');
+      putText(root.querySelector('.mb-shelf-hint'),expanded?(mobileLayout?'左右滑动选月':'左右滑动选月 · 点选中的书或下方按钮打开'):'先展开书架，再选一本月册');
       const read=root.querySelector('[data-action="read"]'),expand=root.querySelector('[data-action="expand"]');
-      if(read){read.hidden=!expanded;putText(read,`翻开${monthName(selected)}  ↗`);read.disabled=bankFrame!==null;}
+      if(read){read.hidden=!expanded;const label=`翻开${monthName(selected)}`;putText(read,mobileLayout?label:label+'  ↗');if(mobileLayout)read.setAttribute('aria-label',label);read.disabled=bankFrame!==null;}
       if(expand)expand.hidden=expanded;
     }
     function stopBank(){bankVelocity=0;bankTimestamp=-Infinity;bankEpoch++;if(bankFrame!==null)global.cancelAnimationFrame?.(bankFrame);if(dragFrame!==null)global.cancelAnimationFrame?.(dragFrame);dragFrame=null;bankFrame=null;bankTarget=null;drag=null;}
@@ -161,7 +161,7 @@
       clearFlight();stopBank();const epoch=bankEpoch;bankTarget=target;
       const fromWidths=months.map(m=>shownWidths.get(m.month)??thicknessFor(m.dayCount)),toWidths=months.map(m=>thicknessFor(m.dayCount));
       if(reduced()||!global.requestAnimationFrame){pose=target;spread=targetSpread;months.forEach((m,i)=>shownWidths.set(m.month,toWidths[i]));bankTarget=null;paintBank();return;}
-      const start=clock(),fromPose=pose,fromSpread=spread,duration=fromSpread!==targetSpread?620:Math.abs(target-fromPose)<.001?240:360;
+      const start=clock(),fromPose=pose,fromSpread=spread,duration=fromSpread!==targetSpread?620:Math.abs(target-fromPose)<.001?(mobileLayout?190:240):(mobileLayout?275:360);
       const velocity=clamp(incoming,-Math.max(.001,Math.abs(target-fromPose)/duration*2),Math.max(.001,Math.abs(target-fromPose)/duration*2));let lastTime=start,lastPose=fromPose;
       function tick(now){
         if(dead||!visible||view!=='shelf'||epoch!==bankEpoch)return;
@@ -224,7 +224,9 @@
       rememberPosition();stopBank();root.replaceChildren(header());root.dataset.view=view;
       if(view==='shelf'){
         root.append(renderShelf());
-        if(!loading&&!error&&months.length){const foot=element('footer','mb-shelf-footer'),expand=button('展开书架  ↗','expand','mb-primary'),read=button('翻开月册','read','mb-primary');foot.append(expand,read);root.append(foot);}
+        if(!loading&&!error&&months.length){const foot=element('footer','mb-shelf-footer'),expand=button('展开书架  ↗','expand','mb-primary'),read=button('翻开月册','read','mb-primary');if(mobileLayout)foot.append(root.querySelector('[data-action="book-prev"]'),read,root.querySelector('[data-action="book-next"]'),expand);
+          else foot.append(expand,read);
+          root.append(foot);}
       }else root.append(renderReader());
       paintedDay=view==='reader'?currentDay:null;
       if(view==='reader'&&!loading&&!error){const body=root.querySelector('.mb-day-scroll');body.scrollTop=readingPositions.get(currentDay)||0;}

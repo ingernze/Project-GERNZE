@@ -44,7 +44,7 @@
     const views=new Map();
     const root=document.createElement('div');root.className='hebao-dialogue';
     root.innerHTML=`<div class="dl-main">
-      <header class="dl-heading"><button type="button" class="dl-exit" aria-label="退出对话" hidden><span aria-hidden="true">‹</span> 退出</button><h2>对话</h2><div class="dl-session-tools"><p class="dl-connection" role="status"></p><details class="dl-demo-tools" hidden><summary aria-label="演示选项">···</summary><div class="dl-tools-popover"><p class="dl-modebar" hidden>界面演示 · 非真实对话，不保存</p><button type="button" class="dl-demo-long">填入长消息</button><button type="button" class="dl-demo-fail">下轮模拟失败：关</button><button type="button" class="dl-demo-exit">退出演示</button></div></details></div></header>
+      <header class="dl-heading"><button type="button" class="dl-exit" aria-label="退出对话" hidden><svg class="dl-nav-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M13 5h4.5A1.5 1.5 0 0 1 19 6.5v11a1.5 1.5 0 0 1-1.5 1.5H13"/><path d="M4.5 12h9m-5.75-3.25L4.5 12l3.25 3.25"/><path class="dl-icon-detail" d="M15 12h.4"/></svg><span class="dl-exit-text">退出</span></button><h2>对话</h2><div class="dl-session-tools"><p class="dl-connection" role="status"></p><details class="dl-demo-tools" hidden><summary aria-label="演示选项">···</summary><div class="dl-tools-popover"><p class="dl-modebar" hidden>界面演示 · 非真实对话，不保存</p><button type="button" class="dl-demo-long">填入长消息</button><button type="button" class="dl-demo-fail">下轮模拟失败：关</button><button type="button" class="dl-demo-exit">退出演示</button></div></details></div></header>
       <div class="dl-scroll" tabindex="0" aria-label="对话与记忆入口">
         <div class="dl-character-stage" data-dialogue-portrait-host><img alt="格莉兹静态半身展示"><small>静态立绘</small></div>
         <div class="dl-chat-card">
@@ -55,9 +55,9 @@
           <div class="dl-log" role="log" aria-label="对话消息" aria-live="polite" aria-relevant="additions text"></div>
           <form class="dl-compose" hidden><div class="dl-compose-row"><textarea rows="2" maxlength="12000" aria-label="对话输入" placeholder="写下想说的话…"></textarea><span data-dialogue-voice-slot hidden></span><button class="dl-send" type="submit">发送</button></div><p class="dl-compose-note"><span class="dl-input-note"></span><span class="dl-shortcut">Ctrl/⌘ + Enter</span></p></form>
         </div>
-        <button type="button" class="dl-books"><span class="dl-books-label"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 5c4-1 6 0 9 2 3-2 5-3 9-2v14c-4-1-6 0-9 2-3-2-5-3-9-2V5Z"/><path d="M12 7v14M6 9l3 1M15 10l3-1"/></svg><span>记忆书架<small>每月一本，每天一页</small></span></span><span class="dl-books-arrow" aria-hidden="true">›</span></button>
+        <button type="button" class="dl-books"><span class="dl-books-label"><svg class="dl-nav-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><rect x="5" y="6" width="3.3" height="10.5" rx=".65"/><rect x="10.4" y="4.8" width="3.3" height="11.7" rx=".65"/><path d="m15.4 7.05 2.8-.7 2.3 9.65-2.8.7z"/><path class="dl-icon-detail" d="M3.8 19.3h16.4"/></svg><span>书架</span></span><span class="dl-books-arrow" aria-hidden="true">›</span></button>
       </div><button type="button" class="dl-more" hidden>回到最新消息 ↓</button>
-    </div><section class="dl-memory" aria-label="记忆书架" hidden><header class="dl-memory-head"><button class="dl-back" type="button">‹ 返回对话</button><h2>记忆书架</h2></header><div id="dialogueMemoryHost" class="dl-memory-host"></div></section>`;
+    </div><section class="dl-memory" aria-label="记忆书架" hidden><header class="dl-memory-head"><button class="dl-back" type="button" aria-label="返回对话">‹ 对话</button><h2>记忆书架</h2></header><div id="dialogueMemoryHost" class="dl-memory-host"></div></section>`;
     container.replaceChildren(root);
     const $=s=>root.querySelector(s),main=$('.dl-main'),memoryPanel=$('.dl-memory'),host=$('#dialogueMemoryHost'),log=$('.dl-log'),input=$('textarea'),sendButton=$('.dl-send'),more=$('.dl-more'),connection=$('.dl-connection');
     $('.dl-character-stage img').src=options.portraitSrc||'portrait/original.png';
@@ -77,7 +77,8 @@
     books.setAttribute('aria-label','打开记忆书架');
     $('.dl-heading').append(books);
     main.append(composer);
-    const shelfBack=document.createElement('button');shelfBack.type='button';shelfBack.className='dl-shelf-back';shelfBack.textContent='返回书架';shelfBack.hidden=true;$('.dl-memory-head').append(shelfBack);
+    const memoryBack=$('.dl-back');
+    const shelfBack=document.createElement('button');shelfBack.type='button';shelfBack.className='dl-shelf-back';shelfBack.textContent='×';shelfBack.setAttribute('aria-label','关闭书架并返回对话');shelfBack.hidden=true;$('.dl-memory-head').append(shelfBack);
     function cancelMotions(){for(const motion of motions){try{motion.cancel();}catch{}}motions.clear();}
     function entrance(element,distance=5){
       if(disposed||!visible||motionPreference?.matches||typeof element.animate!=='function')return;
@@ -251,7 +252,7 @@
     function placeholder(text,small){const node=document.createElement('div');node.className='dl-memory-placeholder';const p=document.createElement('p');p.textContent=text;const hint=document.createElement('small');hint.textContent=small;node.append(p,hint);return node;}
     async function openMemory(){
       if(disposed||memoryOpen)return;$('.dl-demo-tools').open=false;memoryOpen=true;invalidateVoice();const ticket=++memoryEpoch;savedScroll=scroller.scrollTop;cancelMotions();main.hidden=true;memoryPanel.hidden=false;entrance(memoryPanel,6);
-      root.dataset.memoryView='shelf';$('.dl-memory-head h2').textContent='记忆书架';shelfBack.hidden=true;
+      root.dataset.memoryView='shelf';$('.dl-memory-head h2').textContent='记忆书架';memoryBack.textContent='‹ 对话';memoryBack.setAttribute('aria-label','返回对话');shelfBack.hidden=true;
       const child=document.createElement('div');child.className='dl-memory-mount';child.dataset.memoryLayout='mobile';child.style.height='100%';host.replaceChildren(child);$('.dl-back').focus({preventScroll:true});
       if(typeof openMemoryCallback!=='function'){child.append(placeholder('记忆书架尚未接入','返回对话后，草稿和消息会留在原处。'));return;}
       try{
@@ -290,11 +291,37 @@
     on(more,'click',()=>{historyGesture=false;follow=true;more.hidden=true;scroller.scrollTop=latestEdge();});
     on($('.dl-demo-exit'),'click',()=>{$('.dl-demo-tools').open=false;exitDemo();});on($('.dl-demo-long'),'click',()=>{$('.dl-demo-tools').open=false;input.value='【合成长消息】\n这是一条用于查看窄屏排版的测试输入，不是真实聊天或记忆。\n\n'+('这一段用于检查长文字自动换行、输入框高度、消息滚动和键盘下的发送位置。'.repeat(8));updateControls();input.focus();});
     on($('.dl-demo-fail'),'click',()=>{failDemoNext=!failDemoNext;updateControls();});
-    on($('.dl-books'),'click',openMemory);on($('.dl-back'),'click',()=>closeMemory());
-    on(shelfBack,'click',()=>host.querySelector('[data-action="shelf"]')?.click());
-    on(host,'memory-books:view',event=>{root.dataset.memoryView=event.detail.view;shelfBack.hidden=event.detail.view!=='reader';$('.dl-memory-head h2').textContent=event.detail.view==='reader'?event.detail.monthLabel:'记忆书架';});
+    function leaveMemoryStep(){
+      if(root.dataset.memoryView==='reader'){
+        const back=host.querySelector('.mb-books[data-view="reader"] [data-action="shelf"]');
+        if(back){back.click();memoryBack.focus({preventScroll:true});}
+        else closeMemory();
+      }else closeMemory();
+    }
+    on(books,'click',openMemory);
+    on(memoryBack,'click',leaveMemoryStep);
+    on(shelfBack,'click',()=>closeMemory());
+    on(host,'memory-books:view',event=>{
+      const {view,monthLabel}=event.detail;
+      const reader=view==='reader';
+      root.dataset.memoryView=reader?'reader':'shelf';
+      shelfBack.hidden=!reader;
+      memoryBack.textContent=reader?'‹ 书架':'‹ 对话';
+      memoryBack.setAttribute('aria-label',reader?'返回书架':'返回对话');
+      $('.dl-memory-head h2').textContent=reader?monthLabel:'记忆书架';
+    });
     on(root,'pointerdown',event=>{if(!event.target.closest?.('.dl-demo-tools'))$('.dl-demo-tools').open=false;});
-    on(root,'keydown',event=>{if(event.key==='Escape'&&$('.dl-demo-tools').open){$('.dl-demo-tools').open=false;$('.dl-demo-tools summary').focus({preventScroll:true});event.preventDefault();}});
+    on(root,'keydown',event=>{
+      if(event.key!=='Escape'||event.defaultPrevented)return;
+      if($('.dl-demo-tools').open){
+        $('.dl-demo-tools').open=false;
+        $('.dl-demo-tools summary').focus({preventScroll:true});
+        event.preventDefault();
+      }else if(memoryOpen){
+        event.preventDefault();
+        leaveMemoryStep();
+      }
+    });
     on(root,'focusin',viewport);on(root,'focusout',()=>requestAnimationFrame(viewport));
     on(global,'resize',viewport);if(global.visualViewport){on(global.visualViewport,'resize',viewport);on(global.visualViewport,'scroll',viewport);}
     if(motionPreference?.addEventListener)on(motionPreference,'change',cancelMotions);

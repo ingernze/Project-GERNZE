@@ -420,3 +420,183 @@
 @media(orientation:landscape) and (max-height:520px) {
   .hebao-dialogue .mb-books[data-layout=mobile][data-view=shelf] .mb-intro { display:none; }
 }
+
+/* Dialogue and mobile bookshelf navigation. */
+.shell[data-current-page="dialogue"] .dl-heading,
+.shell[data-current-page="dialogue"][data-dialogue-keyboard="true"] .dl-heading,
+.shell[data-current-page="dialogue"] .hebao-dialogue .dl-memory-head {
+  display: grid;
+  grid-template-columns: minmax(64px, 1fr) minmax(0, auto) minmax(64px, 1fr);
+  align-items: center;
+  justify-content: stretch;
+  gap: 4px;
+  min-height: 52px;
+  padding: max(4px, env(safe-area-inset-top, 0px)) 13px 3px;
+  border-bottom: 1px solid #a27f432e;
+}
+.shell[data-current-page="dialogue"] .dl-heading h2,
+.shell[data-current-page="dialogue"] .hebao-dialogue .dl-memory-head h2 {
+  display: block;
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  font: 600 18px/1.3 "Noto Serif CJK SC", "Songti SC", SimSun, serif;
+  letter-spacing: .045em;
+  text-align: center;
+}
+.shell[data-current-page="dialogue"] .dl-heading .dl-session-tools {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: end;
+}
+.shell[data-current-page="dialogue"] .dl-heading .dl-session-tools:has(.dl-demo-tools[hidden]) { display: none; }
+.shell[data-current-page="dialogue"] .dl-heading .dl-exit,
+.shell[data-current-page="dialogue"] .hebao-dialogue .dl-memory-head .dl-back {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+}
+.shell[data-current-page="dialogue"] .dl-heading .dl-books,
+.shell[data-current-page="dialogue"] .hebao-dialogue .dl-memory-head .dl-shelf-back {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+.shell[data-current-page="dialogue"] .dl-heading :is(.dl-exit,.dl-books),
+.shell[data-current-page="dialogue"] .hebao-dialogue .dl-memory-head :is(.dl-back,.dl-shelf-back) {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.shell[data-current-page="dialogue"] .dl-heading :is(.dl-exit,.dl-books) { color: #334d60; }
+.shell[data-current-page="dialogue"] .dl-heading .dl-exit,
+.shell[data-current-page="dialogue"] .dl-heading .dl-books-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.shell[data-current-page="dialogue"] .dl-heading .dl-exit-text { font-size: inherit; vertical-align: baseline; }
+.shell[data-current-page="dialogue"] .dl-heading .dl-books-label > span { display: block; }
+.shell[data-current-page="dialogue"] .dl-heading :is(.dl-exit,.dl-books) .dl-nav-icon {
+  display: block;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.shell[data-current-page="dialogue"] .dl-heading .dl-nav-icon .dl-icon-detail { stroke: #886e4e; }
+.hebao-dialogue .dl-back { text-align: start; }
+.shell[data-current-page="dialogue"] .hebao-dialogue .dl-memory-head { background: #1b3045; color: #eee5d3; }
+.shell[data-current-page="dialogue"] .hebao-dialogue .dl-memory-head .dl-shelf-back { font-size: 19px; }
+.hebao-dialogue :is(.dl-main,.dl-memory,.dl-back,.dl-shelf-back,.dl-memory-host *)[hidden] { display: none !important; }
+
+.hebao-dialogue .dl-memory-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-height: none;
+  gap: 0;
+  margin: 0 13px 5px;
+  padding: 0;
+  border-bottom: 1px solid #b2c2cb38;
+}
+.hebao-dialogue .dl-memory-tabs button {
+  position: relative;
+  min-height: 44px;
+  padding: 0 1px;
+  border: 0;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: #c8d3dd;
+  font-size: clamp(11px, 3.4vw, 13px);
+  white-space: nowrap;
+}
+.hebao-dialogue .dl-memory-tabs button[aria-pressed="true"] { background: #f4e8ce0b; color: #f0d9b1; font-weight: 650; }
+.hebao-dialogue .dl-memory-tabs button[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 28% 0;
+  height: 2px;
+  border-radius: 2px;
+  background: #ceb58d;
+}
+.hebao-dialogue .mb-books[data-layout="mobile"][data-view="shelf"] .mb-intro,
+.hebao-dialogue .mb-books[data-layout="mobile"] .mb-bank-nav,
+.hebao-dialogue .mb-books[data-layout="mobile"] [data-action="shelf"] { display: none; }
+.hebao-dialogue .mb-books[data-layout="mobile"][data-view="shelf"] .mb-selection { padding-block: 0 4px; }
+.hebao-dialogue .mb-books[data-layout="mobile"][data-view="shelf"] .mb-shelf-hint { color: #cdd5dc; margin: 4px 0 5px; }
+.hebao-dialogue .mb-books[data-layout="mobile"][data-view="shelf"] .mb-shelf-footer {
+  display: grid;
+  box-sizing: border-box;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 9px;
+  padding: 10px max(19px, calc((100% - 350px) / 2)) 14px;
+  border-top: 1px solid #c7b58c29;
+  background: #1b3045;
+  max-width: none;
+  width: 100%;
+  margin-inline: auto;
+}
+.hebao-dialogue .mb-books[data-layout="mobile"] .mb-shelf-footer .mb-primary {
+  min-height: 44px;
+  width: 100%;
+  margin: 0;
+  border-radius: 10px;
+  border: 1px solid #e9d0a7;
+  background: #e8d5b4;
+  color: #23394d;
+  box-shadow: inset 0 1px #fff8ec;
+  font-weight: 620;
+  letter-spacing: .06em;
+}
+.hebao-dialogue .mb-books[data-layout="mobile"] .mb-shelf-footer .mb-icon {
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  border: 1px solid #c5d0d936;
+  border-radius: 10px;
+  background: #eaf1f509;
+  color: #e6dfcf;
+  box-shadow: none;
+}
+.hebao-dialogue .mb-books[data-layout="mobile"] .mb-shelf-footer :is(.mb-icon,.mb-primary):disabled { opacity: .46; }
+.hebao-dialogue .mb-books[data-layout="mobile"] .mb-day-nav .mb-page-button { min-height: 44px; border-radius: 9px; box-shadow: none; }
+.hebao-dialogue .mb-books[data-layout="mobile"] .mb-date-select { cursor: pointer; }
+.hebao-dialogue .dl-memory-head :is(.dl-back,.dl-shelf-back),
+.hebao-dialogue .dl-heading :is(.dl-books,.dl-exit),
+.hebao-dialogue .dl-memory-tabs button,
+.hebao-dialogue .mb-books :is(.mb-shelf-footer button,.mb-page-button) {
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  transition: background-color 140ms ease-out, color 140ms ease-out, transform 120ms ease-out;
+}
+.hebao-dialogue :is(.dl-heading,.dl-memory-head,.dl-memory-tabs,.mb-shelf-footer,.mb-day-nav) button:active:not(:disabled) {
+  transform: scale(.965);
+}
+.hebao-dialogue :is(.dl-heading,.dl-memory-head,.dl-memory-tabs) button:active:not(:disabled) { background: #a49a8c24; }
+.hebao-dialogue :is(.dl-memory-head,.dl-memory-tabs,.mb-shelf-footer) button:focus-visible { outline: 2px solid #e3cda8; outline-offset: -3px; }
+
+@media (max-height: 630px) {
+  .shell[data-current-page="dialogue"] .hebao-dialogue .dl-memory-head { min-height: 46px; }
+  .hebao-dialogue .mb-books[data-layout="mobile"][data-view="shelf"] .mb-shelf-footer { padding-block: 3px 6px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .hebao-dialogue .mb-books[data-layout="mobile"][data-view="shelf"] .mb-shelf-footer { width: 46%; padding-inline: 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hebao-dialogue :is(.dl-heading,.dl-memory-head,.dl-memory-tabs,.mb-shelf-footer,.mb-day-nav) button { transition: none; }
+  .hebao-dialogue :is(.dl-heading,.dl-memory-head,.dl-memory-tabs,.mb-shelf-footer,.mb-day-nav) button:active:not(:disabled) { transform: none; }
+}
